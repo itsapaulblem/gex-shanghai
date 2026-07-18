@@ -138,6 +138,33 @@ async function rejectConnection(connectionId, userId) {
   });
 }
 
+async function cancelConnection(connectionId, userId) {
+  return withState(async (state) => {
+    const index = state.connections.findIndex((candidate) => candidate.id === connectionId);
+    if (index === -1) {
+      const error = new Error('CONNECTION_NOT_FOUND');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const connection = state.connections[index];
+    if (connection.requesterUserId !== userId) {
+      const error = new Error('FORBIDDEN');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (connection.status !== 'pending') {
+      const error = new Error('CANCEL_NOT_ALLOWED');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    state.connections.splice(index, 1);
+    return computeConnectionView(connection, userId, state);
+  });
+}
+
 async function isApprovedParticipant(connectionId, userId) {
   await withState(async () => undefined);
   const state = getState();
@@ -163,6 +190,7 @@ async function getConnectionForChat(connectionId, userId) {
 
 export {
   approveConnection,
+  cancelConnection,
   getConnection,
   getConnectionForChat,
   isApprovedParticipant,

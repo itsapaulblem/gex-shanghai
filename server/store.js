@@ -11,8 +11,12 @@ const dbPath = path.join(dataDir, 'gex-shanghai.json');
 let state;
 let statePromise;
 
-function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+function hashPassword(password, salt = '') {
+  if (!salt) {
+    return crypto.createHash('sha256').update(password).digest('hex');
+  }
+
+  return crypto.createHash('sha256').update(`${salt}:${password}`).digest('hex');
 }
 
 function createId(prefix) {
@@ -252,6 +256,22 @@ async function loadState() {
       state.profiles ??= [];
       state.connections ??= [];
       state.messages ??= [];
+
+      const invalidUserIds = new Set(
+        state.users
+          .filter((user) => !user.email?.trim() || !user.email.includes('@') || !user.passwordHash)
+          .map((user) => user.id),
+      );
+
+      if (invalidUserIds.size > 0) {
+        state.users = state.users.filter((user) => !invalidUserIds.has(user.id));
+        state.sessions = state.sessions.filter((session) => !invalidUserIds.has(session.userId));
+        state.profiles = state.profiles.filter((profile) => !invalidUserIds.has(profile.ownerUserId));
+        state.connections = state.connections.filter((connection) => !invalidUserIds.has(connection.requesterUserId) && !invalidUserIds.has(connection.targetUserId));
+        state.messages = state.messages.filter((message) => !invalidUserIds.has(message.senderUserId));
+        await saveState();
+      }
+
       return state;
     })();
   }
@@ -283,7 +303,7 @@ function sanitizeUser(user) {
     return null;
   }
 
-  const { passwordHash, ...safeUser } = user;
+  const { passwordHash, passwordSalt, ...safeUser } = user;
   return safeUser;
 }
 

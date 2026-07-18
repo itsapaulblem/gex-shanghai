@@ -2,10 +2,10 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { approveConnection, listConnections, rejectConnection, requestConnection } from './services/connections.js';
+import { approveConnection, cancelConnection, listConnections, rejectConnection, requestConnection } from './services/connections.js';
 import { listMessages, sendMessage } from './services/chat.js';
 import { login, register, resolveSession, updateLanguage } from './services/auth.js';
-import { createProfile, getProfile, listProfiles } from './services/profiles.js';
+import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
 import { loadState } from './store.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +19,7 @@ function sendJson(response, statusCode, payload) {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
   });
   response.end(JSON.stringify(payload));
 }
@@ -191,6 +191,18 @@ async function handleApi(request, response) {
       return;
     }
 
+    if (request.method === 'PATCH' && url.pathname === '/api/profiles/me') {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const body = await readBody(request);
+      const profile = await updateOwnProfile(currentUser.id, body);
+      sendJson(response, 200, { profile });
+      return;
+    }
+
     if (request.method === 'GET' && url.pathname.startsWith('/api/profiles/')) {
       if (!currentUser) {
         sendJson(response, 401, { error: 'UNAUTHORIZED' });
@@ -241,6 +253,18 @@ async function handleApi(request, response) {
       const connection = action === 'approve'
         ? await approveConnection(connectionId, currentUser.id)
         : await rejectConnection(connectionId, currentUser.id);
+      sendJson(response, 200, { connection });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname.match(/^\/api\/connections\/[^/]+\/cancel$/)) {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const connectionId = url.pathname.split('/')[3];
+      const connection = await cancelConnection(connectionId, currentUser.id);
       sendJson(response, 200, { connection });
       return;
     }

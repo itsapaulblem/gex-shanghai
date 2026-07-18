@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
-  Bell,
   Check,
   CheckCircle2,
   ChevronRight,
+  Eye,
+  EyeOff,
   Globe2,
   Heart,
   LogIn,
@@ -14,17 +15,20 @@ import {
   Shield,
   Sparkles,
   UserPlus,
+  UserCheck,
   Users,
   X,
 } from 'lucide-react';
 import { api, type ConnectionRecord, type Locale, type MessageRecord, type ProfileRecord, type SessionRecord } from './lib/api';
 
-type Screen = 'auth' | 'setup' | 'browse' | 'detail' | 'connections' | 'chat';
+type Screen = 'auth' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
 type AuthMode = 'login' | 'register';
 type GenderFilter = 'all' | '男' | '女';
 type SortMode = 'latest' | 'age-asc' | 'age-desc' | 'height';
 
 type ProfileFormState = {
+  honorific: string;
+  surname: string;
   childAlias: string;
   gender: '男' | '女';
   birthYear: string;
@@ -76,14 +80,16 @@ type Copy = {
   searchPlaceholder: string;
   firstStepTitle: string;
   firstStepDescription: string;
+  myProfile: string;
+  myConnections: string;
 };
 
 const COPY: Record<Locale, Copy> = {
   zh: {
-    appName: '上海相亲角',
-    subtitle: 'Shanghai Marriage Weekend Market',
-    authTitle: '父母代为托管的相亲平台',
-    authDescription: '使用邮箱和密码创建账户或直接登录。首次登录后必须先创建子女档案，才能浏览、发起连接或进入私聊。',
+    appName: '上海人民公园相亲角',
+    subtitle: '线上网站',
+    authTitle: '为孩子寻得合适良缘',
+    authDescription: '以家庭责任为起点，帮助孩子进入更稳妥的婚配路径。登录后先完善档案，再浏览、连接与私聊。',
     register: '注册',
     login: '登录',
     email: '邮箱',
@@ -102,17 +108,19 @@ const COPY: Record<Locale, Copy> = {
     incoming: '收到的申请',
     outgoing: '我发出的申请',
     connected: '已连接',
-    completeProfileNotice: '请先完成子女档案，之后才能浏览其他家长的征婚信息。',
+    completeProfileNotice: '请填写完整子女资料，解锁浏览、申请与私聊功能。',
     translationHint: '网站主语言为中文，右上角可切换为英文界面。',
     searchPlaceholder: '搜索年龄、城市、行业、学校、户籍...',
     firstStepTitle: '先创建档案',
-    firstStepDescription: '首次登录后必须先创建子女档案，系统才会开放浏览、申请和私信功能。',
+    firstStepDescription: '请填写完整子女资料，系统才会开放浏览、申请和私信功能。',
+    myProfile: '我的档案',
+    myConnections: '我的连接',
   },
   en: {
-    appName: 'Shanghai Matchmaking Market',
-    subtitle: 'Weekend market for parent-managed marriage profiles',
-    authTitle: 'A parent-managed matchmaking platform',
-    authDescription: 'Create an account or sign in with email and password. First-time users must complete a child profile before browsing, connecting, or chatting.',
+    appName: 'Shanghai People’s Park Marriage Market',
+    subtitle: 'Online website',
+    authTitle: 'Find a Match, Build a Future',
+    authDescription: 'Turn family responsibility into lasting outcomes: more compatible profiles, stronger family cohesion, and a better chance at a stable match.',
     register: 'Register',
     login: 'Sign in',
     email: 'Email',
@@ -131,15 +139,19 @@ const COPY: Record<Locale, Copy> = {
     incoming: 'Incoming requests',
     outgoing: 'Outgoing requests',
     connected: 'Connected',
-    completeProfileNotice: 'Complete the child profile first, then browsing and messaging will unlock.',
+    completeProfileNotice: 'Complete the child profile to unlock browsing, requests, and chat.',
     translationHint: 'The site is Chinese-first, and you can switch the interface to English from the top right.',
     searchPlaceholder: 'Search by age, city, industry, school, hukou...',
     firstStepTitle: 'Create the profile first',
-    firstStepDescription: 'After the first login, the child profile must be completed before browsing, requests, or chat become available.',
+    firstStepDescription: 'Please complete the child profile to unlock browsing, requests, and chat.',
+    myProfile: 'My Profile',
+    myConnections: 'My Connections',
   },
 };
 
 const defaultProfileForm: ProfileFormState = {
+  honorific: 'Mr',
+  surname: '',
   childAlias: '',
   gender: '男',
   birthYear: '1995',
@@ -157,11 +169,56 @@ const defaultProfileForm: ProfileFormState = {
   income: '1.5-3万/月',
   property: '有房',
   car: '有车',
-  traits: '踏实, 孝顺, 爱运动',
+  traits: '',
   hobbies: '',
   about: '',
   preferences: '',
 };
+
+const HONORIFIC_OPTIONS = [
+  { label: 'Mr', value: 'Mr' },
+  { label: 'Mrs', value: 'Mrs' },
+  { label: 'Ms', value: 'Ms' },
+  { label: 'Dr', value: 'Dr' },
+  { label: 'Mdm', value: 'Mdm' },
+];
+
+const INCOME_OPTIONS = [
+  '0-1万/月',
+  '1-2万/月',
+  '2-3万/月',
+  '3-5万/月',
+  '5-8万/月',
+  '8万/月以上',
+];
+
+const BIRTH_YEARS = Array.from({ length: 2026 - 1940 + 1 }, (_, index) => String(2026 - index));
+
+const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
+  'honorific',
+  'surname',
+  'childAlias',
+  'gender',
+  'birthYear',
+  'age',
+  'height',
+  'weight',
+  'city',
+  'hukou',
+  'hometown',
+  'education',
+  'school',
+  'major',
+  'industry',
+  'jobTitle',
+  'income',
+  'property',
+  'car',
+  'traits',
+  'hobbies',
+  'about',
+  'preferences',
+];
 
 function getInitialLocale(): Locale {
   const stored = window.localStorage.getItem('gex-locale');
@@ -190,8 +247,8 @@ function SectionLabel({ title, subtitle }: { title: string; subtitle?: string })
   return (
     <div className="mb-3 flex items-end justify-between gap-4">
       <div>
-        <div className="text-xs font-semibold text-[#1A1208]">{title}</div>
-        {subtitle ? <div className="mt-0.5 text-[10px] font-mono text-[#7A6E62]">{subtitle}</div> : null}
+        <div className="text-sm font-semibold text-[#1A1208]">{title}</div>
+        {subtitle ? <div className="mt-0.5 text-xs font-mono text-[#7A6E62]">{subtitle}</div> : null}
       </div>
       <div className="h-px flex-1 bg-[#D8D0C4]" />
     </div>
@@ -214,7 +271,24 @@ function formatAge(profile: ProfileRecord) {
 }
 
 function ProfilePill({ profile }: { profile: ProfileRecord }) {
-  return <Badge tone={profile.hukou === '上海' ? 'red' : 'default'}>{profile.hukou === '上海' ? '沪籍' : profile.hukou}</Badge>;
+  return <Badge tone={profile.hukou === '上海' ? 'gold' : 'default'}>{profile.hukou === '上海' ? '沪籍' : profile.hukou}</Badge>;
+}
+
+function getProfileConnectionState(
+  profileId: string,
+  connections: { ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null,
+) {
+  const pending = connections?.outgoing.some((connection) => connection.targetProfileId === profileId && connection.status === 'pending') ?? false;
+  if (pending) {
+    return 'pending' as const;
+  }
+
+  const connected = connections?.connected.some((connection) => {
+    const relatedProfileId = connection.otherProfile?.id ?? connection.targetProfileId ?? connection.requesterProfileId;
+    return relatedProfileId === profileId;
+  }) ?? false;
+
+  return connected ? 'connected' as const : 'none' as const;
 }
 
 export default function MarketMvpApp() {
@@ -226,6 +300,7 @@ export default function MarketMvpApp() {
   const [authMode, setAuthMode] = useState<AuthMode>('register');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [authPasswordVisible, setAuthPasswordVisible] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
@@ -233,16 +308,61 @@ export default function MarketMvpApp() {
   const [connections, setConnections] = useState<{ ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null>(null);
   const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[] } | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const [filters, setFilters] = useState({ search: '', gender: 'all' as GenderFilter, sort: 'latest' as SortMode });
   const [profileForm, setProfileForm] = useState<ProfileFormState>(defaultProfileForm);
 
   const copy = COPY[locale];
   const ownProfile = session?.profile ?? null;
 
-  function showNotice(value: string) {
-    setNotice(value);
-    window.setTimeout(() => setNotice((current) => (current === value ? null : current)), 3000);
+  function showNotice(message: string, tone: 'error' | 'success' = 'error') {
+    setNotice({ message, tone });
+    window.setTimeout(() => setNotice((current) => (current?.message === message ? null : current)), 2800);
+  }
+
+  function formatErrorMessage(error: unknown) {
+    const code = String((error as { message?: string } | null)?.message ?? error ?? 'REQUEST_FAILED');
+    const mapped: Record<string, string> = {
+      EMAIL_REQUIRED: 'Error! Email is required!',
+      EMAIL_INVALID: 'Error! Email must include @!',
+      EMAIL_EXISTS: 'Error! Email exists!',
+      INVALID_CREDENTIALS: 'Error! Wrong Password!',
+      PASSWORD_TOO_WEAK: 'Error! Password needs 8 characters, one uppercase letter, and one special character!',
+      CANCEL_NOT_ALLOWED: 'Error! Only pending requests can be cancelled!',
+      PROFILE_EXISTS: 'Error! Profile already exists!',
+      PROFILE_NOT_FOUND: 'Error! Profile not found!',
+      UNAUTHORIZED: 'Error! Please sign in again!',
+      REQUEST_FAILED: 'Error! Request failed!',
+    };
+    return mapped[code] ?? `Error! ${code.replaceAll('_', ' ')}`;
+  }
+
+  function populateProfileForm(profile?: ProfileRecord | null) {
+    setProfileForm({
+      honorific: profile?.honorific ?? 'Mr',
+      surname: profile?.surname ?? '',
+      childAlias: profile?.childAlias ?? '',
+      gender: profile?.gender ?? '男',
+      birthYear: String(profile?.birthYear ?? 1995),
+      age: String(profile?.age ?? 31),
+      height: String(profile?.height ?? 175),
+      weight: String(profile?.weight ?? 65),
+      city: profile?.city ?? '上海',
+      hukou: profile?.hukou ?? '上海',
+      hometown: profile?.hometown ?? '上海',
+      education: profile?.education ?? '硕士',
+      school: profile?.school ?? '',
+      major: profile?.major ?? '',
+      industry: profile?.industry ?? '',
+      jobTitle: profile?.jobTitle ?? '',
+      income: profile?.income ?? '1.5-3万/月',
+      property: profile?.property ?? '有房',
+      car: profile?.car ?? '有车',
+      traits: profile?.traits?.join(', ') ?? '',
+      hobbies: profile?.hobbies ?? '',
+      about: profile?.about ?? '',
+      preferences: profile?.preferences ?? '',
+    });
   }
 
   async function refreshSession(activeToken = token) {
@@ -266,6 +386,7 @@ export default function MarketMvpApp() {
         await refreshBrowse(activeToken);
         await refreshConnections(activeToken);
       } else {
+        populateProfileForm(null);
         setScreen('setup');
       }
     } finally {
@@ -304,7 +425,7 @@ export default function MarketMvpApp() {
       setSession(null);
       setScreen('auth');
       setLoading(false);
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     });
   }, []);
 
@@ -317,7 +438,7 @@ export default function MarketMvpApp() {
 
   useEffect(() => {
     if (token && session?.profile) {
-      refreshBrowse(token, filters).catch((error) => showNotice(String(error.message || error)));
+      refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)));
     }
   }, [filters.sort]);
 
@@ -336,9 +457,9 @@ export default function MarketMvpApp() {
       if (payload.profile) {
         await Promise.all([refreshBrowse(payload.token), refreshConnections(payload.token)]);
       }
-      showNotice(authMode === 'login' ? '登录成功' : '账户已创建');
+      showNotice(authMode === 'login' ? 'Success! Logged in.' : 'Success! Account created.', 'success');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     } finally {
       setAuthBusy(false);
     }
@@ -351,6 +472,15 @@ export default function MarketMvpApp() {
 
     try {
       setProfileBusy(true);
+      const missingField = REQUIRED_PROFILE_FIELDS.find((field) => {
+        const value = profileForm[field];
+        return typeof value === 'string' ? !value.trim() : false;
+      });
+
+      if (missingField) {
+        throw new Error('PROFILE_REQUIRED');
+      }
+
       const payload = {
         ...profileForm,
         age: Number(profileForm.age),
@@ -359,11 +489,16 @@ export default function MarketMvpApp() {
         weight: Number(profileForm.weight),
         traits: toTraits(profileForm.traits),
       };
-      await api.createProfile(token, payload);
+      if (ownProfile) {
+        await api.updateOwnProfile(token, payload);
+        showNotice(locale === 'zh' ? 'Success! 档案已更新。' : 'Success! Profile updated.', 'success');
+      } else {
+        await api.createProfile(token, payload);
+        showNotice(locale === 'zh' ? 'Success! 档案已提交。' : 'Success! Profile submitted.', 'success');
+      }
       await refreshSession(token);
-      showNotice(locale === 'zh' ? '档案已提交' : 'Profile submitted');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     } finally {
       setProfileBusy(false);
     }
@@ -379,7 +514,7 @@ export default function MarketMvpApp() {
       setSelectedProfile(payload.profile);
       setScreen('detail');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -391,9 +526,9 @@ export default function MarketMvpApp() {
     try {
       await api.requestConnection(token, profileId);
       await refreshConnections(token);
-      showNotice(locale === 'zh' ? '连接申请已发送' : 'Connection request sent');
+      showNotice(locale === 'zh' ? 'Success! 连接申请已发送。' : 'Success! Connection request sent.', 'success');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -405,9 +540,9 @@ export default function MarketMvpApp() {
     try {
       await api.approveConnection(token, connectionId);
       await refreshConnections(token);
-      showNotice(locale === 'zh' ? '已同意连接' : 'Connection approved');
+      showNotice(locale === 'zh' ? 'Success! 已同意连接。' : 'Success! Connection approved.', 'success');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -419,9 +554,23 @@ export default function MarketMvpApp() {
     try {
       await api.rejectConnection(token, connectionId);
       await refreshConnections(token);
-      showNotice(locale === 'zh' ? '已拒绝连接' : 'Connection rejected');
+      showNotice(locale === 'zh' ? 'Success! 已拒绝连接。' : 'Success! Connection rejected.', 'success');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
+    }
+  }
+
+  async function cancelRequest(connectionId: string) {
+    if (!token) {
+      return;
+    }
+
+    try {
+      await api.cancelConnection(token, connectionId);
+      await refreshConnections(token);
+      showNotice(locale === 'zh' ? 'Success! 已取消申请。' : 'Success! Request cancelled.', 'success');
+    } catch (error) {
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -436,7 +585,7 @@ export default function MarketMvpApp() {
       setScreen('chat');
       setMessageText('');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -451,7 +600,7 @@ export default function MarketMvpApp() {
       setChat(payload);
       setMessageText('');
     } catch (error) {
-      showNotice(String(error.message || error));
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -464,6 +613,18 @@ export default function MarketMvpApp() {
     setChat(null);
     setSelectedProfile(null);
     setScreen('auth');
+  }
+
+  function openOwnProfilePage() {
+    if (!ownProfile) {
+      showNotice(locale === 'zh' ? '请先创建个人档案。' : 'Please create a profile first.');
+      populateProfileForm(null);
+      setScreen('setup');
+      return;
+    }
+
+    populateProfileForm(ownProfile);
+    setScreen('setup');
   }
 
   const incomingCount = connections?.incoming.length ?? 0;
@@ -492,7 +653,7 @@ export default function MarketMvpApp() {
           <div className="relative overflow-hidden border-r border-[#D8D0C4] bg-white px-8 py-10 lg:px-12">
             <div className="mb-10 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
                 <div>
                   <div className="font-serif text-lg font-semibold">{copy.appName}</div>
                   <div className="text-[10px] font-mono text-[#7A6E62]">{copy.subtitle}</div>
@@ -507,28 +668,39 @@ export default function MarketMvpApp() {
             </div>
 
             <div className="max-w-xl">
-              <div className="mb-4 flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.22em] text-[#B5272A]">
-                <Sparkles size={14} /> Shanghai parent-managed matchmaking
+              <div className="mb-4 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-[#A87C1A]">
+                <Sparkles size={14} /> {locale === 'zh' ? '责任撮合 · 以家为本' : 'Responsible matchmaking · family first'}
               </div>
-              <h1 className="font-serif text-4xl font-semibold leading-tight">{copy.authTitle}</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-[#5A5248]">{copy.authDescription}</p>
+              <h1 className="font-serif text-5xl font-semibold leading-tight">{copy.authTitle}</h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-[#5A5248]">{copy.authDescription}</p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <Card className="p-4">
-                  <Shield className="mb-3 text-[#B5272A]" size={18} />
-                  <div className="text-sm font-semibold">匿名与隐私</div>
-                  <div className="mt-1 text-[12px] leading-6 text-[#5A5248]">档案默认不公开姓名与联系方式，连接成功后才开放聊天。</div>
-                </Card>
-                <Card className="p-4">
-                  <Users className="mb-3 text-[#B5272A]" size={18} />
-                  <div className="text-sm font-semibold">上海相亲角</div>
-                  <div className="mt-1 text-[12px] leading-6 text-[#5A5248]">先浏览、再申请连接，最后进入双方私密房间。</div>
-                </Card>
-                <Card className="p-4">
-                  <Bell className="mb-3 text-[#B5272A]" size={18} />
-                  <div className="text-sm font-semibold">英文切换</div>
-                  <div className="mt-1 text-[12px] leading-6 text-[#5A5248]">右上角可以切换英文界面，便于海外家庭使用。</div>
-                </Card>
+                {[
+                  {
+                    icon: Shield,
+                    title: locale === 'zh' ? '匿名与隐私' : 'Privacy first',
+                    body: locale === 'zh' ? '档案默认不公开姓名与联系方式，只有双方同意后才开放聊天。' : 'Profiles stay anonymous until both sides agree to connect, then chat unlocks.',
+                  },
+                  {
+                    icon: Users,
+                    title: locale === 'zh' ? '家庭责任' : 'Family responsibility',
+                    body: locale === 'zh' ? '把“为孩子寻良缘”变成可执行的家庭行动。' : 'Turn the duty to guide a child toward marriage into a clear, practical step.',
+                  },
+                  {
+                    icon: Sparkles,
+                    title: locale === 'zh' ? '规模与结果' : 'Scale with outcomes',
+                    body: locale === 'zh' ? '用更多活跃档案提高匹配机会，争取更稳妥的结果。' : 'A larger active pool means more choices, stronger competition, and better long-term outcomes.',
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Card key={item.title} className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                      <Icon className="mb-3 text-[#A87C1A]" size={18} />
+                      <div className="text-base font-semibold">{item.title}</div>
+                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">{item.body}</div>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -537,27 +709,20 @@ export default function MarketMvpApp() {
             <Card className="w-full max-w-md p-6 shadow-sm">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-[#1A1208]">{authMode === 'login' ? copy.login : copy.register}</div>
-                  <div className="text-[10px] font-mono text-[#7A6E62]">{copy.translationHint}</div>
+                  <div className="text-sm font-semibold text-[#1A1208]">{authMode === 'login' ? copy.login : copy.register}</div>
                 </div>
-                <button
-                  onClick={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
-                  className="rounded-full bg-[#F7F4EF] px-3 py-1 text-[11px] text-[#5A5248]"
-                >
-                  {locale === 'zh' ? 'English' : '中文'}
-                </button>
               </div>
 
-              <div className="mb-4 grid grid-cols-2 rounded-full border border-[#D8D0C4] bg-[#FAFAF8] p-1">
+              <div className="mb-4 grid grid-cols-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] p-1">
                 <button
                   onClick={() => setAuthMode('register')}
-                  className={`rounded-full px-3 py-2 text-sm ${authMode === 'register' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
+                  className={`rounded-full px-3 py-2 text-base ${authMode === 'register' ? 'bg-[#A87C1A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.createAccount}
                 </button>
                 <button
                   onClick={() => setAuthMode('login')}
-                  className={`rounded-full px-3 py-2 text-sm ${authMode === 'login' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
+                  className={`rounded-full px-3 py-2 text-base ${authMode === 'login' ? 'bg-[#A87C1A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.login}
                 </button>
@@ -565,41 +730,47 @@ export default function MarketMvpApp() {
 
               <div className="space-y-4">
                 <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{copy.email}</div>
+                  <div className="mb-1 text-xs font-medium text-[#1A1208]">{copy.email}</div>
                   <input
                     value={authEmail}
                     onChange={(event) => setAuthEmail(event.target.value)}
                     type="email"
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-base outline-none focus:border-[#A87C1A]"
                     placeholder="parent@example.com"
                   />
                 </label>
                 <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{copy.password}</div>
-                  <input
-                    value={authPassword}
-                    onChange={(event) => setAuthPassword(event.target.value)}
-                    type="password"
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
-                    placeholder="********"
-                  />
+                  <div className="mb-1 text-xs font-medium text-[#1A1208]">{copy.password}</div>
+                  <div className="relative">
+                    <input
+                      value={authPassword}
+                      onChange={(event) => setAuthPassword(event.target.value)}
+                      type={authPasswordVisible ? 'text' : 'password'}
+                      className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 pr-12 text-base outline-none focus:border-[#A87C1A]"
+                      placeholder="********"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAuthPasswordVisible((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-[#7A6E62]"
+                      aria-label={authPasswordVisible ? (locale === 'zh' ? '隐藏密码' : 'Hide password') : (locale === 'zh' ? '显示密码' : 'Show password')}
+                    >
+                      {authPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </label>
                 <button
                   onClick={submitAuth}
                   disabled={authBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B5272A] px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#A87C1A] px-4 py-3 text-base font-medium text-white disabled:opacity-60"
                 >
                   <LogIn size={16} /> {copy.signIn}
                 </button>
               </div>
-
-              <div className="mt-5 rounded-lg border border-[#E8D49A] bg-[#FDF6E3] px-4 py-3 text-xs leading-6 text-[#7A5A10]">
-                {copy.firstStepTitle}：{copy.firstStepDescription}
-              </div>
             </Card>
           </div>
         </div>
-        {notice ? <Toast message={notice} /> : null}
+        {notice ? <Toast notice={notice} /> : null}
       </div>
     );
   }
@@ -612,17 +783,57 @@ export default function MarketMvpApp() {
           locale={locale}
           onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
           onSignOut={signOut}
+          onLogoClick={() => setScreen('browse')}
+          onProfileClick={openOwnProfilePage}
           currentScreen={copy.profileSetup}
         />
         <div className="mx-auto max-w-5xl px-6 py-8">
-          <Card className="mb-6 border-[#E8D49A] bg-[#FDF6E3] p-4 text-sm text-[#7A5A10]">{copy.completeProfileNotice}</Card>
-          <SectionLabel title={copy.profileSetup} subtitle={copy.firstStepDescription} />
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <button onClick={() => setScreen('browse')} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+            <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
+          </button>
+          <SectionLabel title={ownProfile ? copy.myProfile : copy.profileSetup} />
+          <div className="grid gap-6">
             <Card className="p-6">
               <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '称呼' : 'Title'} *</div>
+                  <select
+                    value={profileForm.honorific}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, honorific: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                  >
+                    {HONORIFIC_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '姓氏' : 'Surname'} *</div>
+                  <input
+                    value={profileForm.surname}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, surname: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '例如：王' : 'e.g. Wang'}
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '子女称呼' : 'Alias'} *</div>
+                  <input
+                    value={profileForm.childAlias}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, childAlias: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '例如：晨晨' : 'e.g. Chenchen'}
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '出生年份' : 'Birth year'} *</div>
+                  <select
+                    value={profileForm.birthYear}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, birthYear: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                  >
+                    {BIRTH_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
+                  </select>
+                </label>
                 {Object.entries({
-                  childAlias: '子女称呼 / Alias',
-                  birthYear: '出生年份 / Birth year',
                   age: '年龄 / Age',
                   height: '身高 / Height',
                   weight: '体重 / Weight',
@@ -639,23 +850,49 @@ export default function MarketMvpApp() {
                   car: '车辆 / Car',
                 }).map(([key, label]) => (
                   <label key={key} className="block">
-                    <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{label}</div>
-                    <input
-                      value={profileForm[key as keyof ProfileFormState] as string}
-                      onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))}
-                      className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
-                    />
+                    <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{label} *</div>
+                    {key === 'income' ? (
+                      <select
+                        value={profileForm.income}
+                        onChange={(event) => setProfileForm((current) => ({ ...current, income: event.target.value }))}
+                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                      >
+                        {INCOME_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                    ) : key === 'property' ? (
+                      <select
+                        value={profileForm.property}
+                        onChange={(event) => setProfileForm((current) => ({ ...current, property: event.target.value }))}
+                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                      >
+                        {['有房', '无房'].map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                    ) : key === 'car' ? (
+                      <select
+                        value={profileForm.car}
+                        onChange={(event) => setProfileForm((current) => ({ ...current, car: event.target.value }))}
+                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                      >
+                        {['有车', '无车'].map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        value={profileForm[key as keyof ProfileFormState] as string}
+                        onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))}
+                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                      />
+                    )}
                   </label>
                 ))}
 
                 <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Gender / 性别</div>
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Gender / 性别 *</div>
                   <div className="flex gap-3">
                     {['男', '女'].map((gender) => (
                       <button
                         key={gender}
                         onClick={() => setProfileForm((current) => ({ ...current, gender: gender as '男' | '女' }))}
-                        className={`rounded-full border px-4 py-2 text-sm ${profileForm.gender === gender ? 'border-[#B5272A] bg-[#FEF0F0] text-[#B5272A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+                        className={`rounded-full border px-4 py-2 text-sm ${profileForm.gender === gender ? 'border-[#A87C1A] bg-[#FEF0F0] text-[#A87C1A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
                       >
                         {gender}
                       </button>
@@ -664,36 +901,41 @@ export default function MarketMvpApp() {
                 </label>
 
                 <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Traits / 性格标签</div>
-                  <input
-                    value={profileForm.traits}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, traits: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
-                    placeholder="踏实, 孝顺, 爱运动"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Hobbies / 爱好</div>
-                  <input
-                    value={profileForm.hobbies}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, hobbies: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">About / 简介</div>
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">About / 简介 *</div>
                   <textarea
                     value={profileForm.about}
                     onChange={(event) => setProfileForm((current) => ({ ...current, about: event.target.value }))}
-                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
+                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '填写孩子的整体介绍' : 'Share a short introduction'}
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Traits / 性格标签 *</div>
+                  <input
+                    value={profileForm.traits}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, traits: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '例如：踏实, 孝顺, 爱运动' : 'For example: steady, kind, active'}
+                  />
+                  <div className="mt-1 text-[10px] font-mono text-[#8A8070]">{locale === 'zh' ? '建议标签只作提示，不会自动填入。' : 'Suggested tags are only hints and will not auto-fill.'}</div>
+                </label>
+                <label className="block md:col-span-2">
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Hobbies / 爱好 *</div>
+                  <input
+                    value={profileForm.hobbies}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, hobbies: event.target.value }))}
+                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '例如：摄影、爬山、读书' : 'For example: photography, hiking, reading'}
                   />
                 </label>
                 <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Preferences / 择偶要求</div>
+                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Preferences / 择偶要求 *</div>
                   <textarea
                     value={profileForm.preferences}
                     onChange={(event) => setProfileForm((current) => ({ ...current, preferences: event.target.value }))}
-                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
+                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                    placeholder={locale === 'zh' ? '填写对另一半的期待' : 'State partner preferences'}
                   />
                 </label>
               </div>
@@ -701,42 +943,28 @@ export default function MarketMvpApp() {
                 <button
                   onClick={submitProfile}
                   disabled={profileBusy}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#B5272A] px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#A87C1A] px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
                 >
-                  <CheckCircle2 size={16} /> {locale === 'zh' ? '提交档案' : 'Submit profile'}
+                  <CheckCircle2 size={16} /> {ownProfile ? (locale === 'zh' ? '保存修改' : 'Save changes') : (locale === 'zh' ? '提交档案' : 'Submit profile')}
                 </button>
               </div>
             </Card>
 
-            <div className="space-y-4">
-              <Card className="p-5">
-                <SectionLabel title={locale === 'zh' ? '匿名规则' : 'Privacy rules'} />
-                <p className="text-sm leading-7 text-[#5A5248]">
-                  {locale === 'zh'
-                    ? '网站不会公开真实姓名和联系方式。档案创建后，系统才允许浏览其他人的详情。'
-                    : 'The site does not expose real names or contact details. After profile creation, browsing and connections unlock.'}
-                </p>
-              </Card>
-              <Card className="p-5">
-                <SectionLabel title={locale === 'zh' ? '当前步骤' : 'Current step'} />
-                <div className="space-y-3 text-sm text-[#5A5248]">
-                  <div className="flex items-center gap-2"><Check className="text-[#2C8A4A]" size={16} /> {locale === 'zh' ? '创建账号 / 登录' : 'Create account / sign in'}</div>
-                  <div className="flex items-center gap-2"><Users className="text-[#B5272A]" size={16} /> {locale === 'zh' ? '创建子女档案' : 'Create child profile'}</div>
-                  <div className="flex items-center gap-2 opacity-50"><MessageSquare size={16} /> {locale === 'zh' ? '浏览、申请、聊天' : 'Browse, request, and chat'}</div>
-                </div>
-              </Card>
-            </div>
           </div>
         </div>
-        {notice ? <Toast message={notice} /> : null}
+        {notice ? <Toast notice={notice} /> : null}
       </div>
     );
   }
 
   if (screen === 'detail' && selectedProfile) {
+    const detailConnectionState = getProfileConnectionState(selectedProfile.id, connections);
+    const detailRequested = detailConnectionState === 'pending';
+    const detailConnected = detailConnectionState === 'connected';
+
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} currentScreen={copy.browse} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
         <div className="mx-auto max-w-6xl px-6 py-8">
           <button onClick={() => setScreen('browse')} className="mb-6 inline-flex items-center gap-2 text-sm text-[#5A5248]">
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
@@ -762,13 +990,15 @@ export default function MarketMvpApp() {
               </div>
               <div className="mt-6 space-y-3">
                 <button
-                  onClick={() => requestConnect(selectedProfile.id)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B5272A] px-4 py-3 text-sm font-medium text-white"
+                  onClick={() => { if (!detailRequested && !detailConnected) { void requestConnect(selectedProfile.id); } }}
+                  disabled={detailRequested || detailConnected}
+                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition-colors ${detailRequested || detailConnected ? 'bg-[#2C8A4A]' : 'bg-[#A87C1A]'}`}
                 >
-                  <Heart size={16} /> {copy.requestConnect}
+                  {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <UserCheck size={16} /> : <Heart size={16} />}
+                  {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '已发送' : 'Requested') : copy.requestConnect}
                 </button>
                 <button onClick={() => setScreen('connections')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
-                  <Users size={16} /> {copy.connections}
+                  <Users size={16} /> {copy.myConnections}
                 </button>
               </div>
             </Card>
@@ -785,7 +1015,7 @@ export default function MarketMvpApp() {
             </div>
           </div>
         </div>
-        {notice ? <Toast message={notice} /> : null}
+        {notice ? <Toast notice={notice} /> : null}
       </div>
     );
   }
@@ -797,9 +1027,12 @@ export default function MarketMvpApp() {
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} currentScreen={copy.connections} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.myConnections} />
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <SectionLabel title={copy.connections} subtitle={locale === 'zh' ? '收到的申请、发出的申请、已连接' : 'Incoming, outgoing, and connected'} />
+          <button onClick={() => setScreen('browse')} className="mb-4 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+            <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
+          </button>
+          <SectionLabel title={copy.myConnections} subtitle={locale === 'zh' ? '收到的申请、发出的申请、已连接' : 'Incoming, outgoing, and connected'} />
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="p-5">
               <div className="mb-4 flex items-center justify-between">
@@ -808,7 +1041,7 @@ export default function MarketMvpApp() {
               </div>
               <div className="space-y-3">
                 {incoming.length === 0 ? <EmptyState label={locale === 'zh' ? '暂无申请' : 'No requests yet'} /> : incoming.map((connection) => (
-                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onApprove={approve} onReject={reject} />
+                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onViewProfile={openProfile} onApprove={approve} onReject={reject} />
                 ))}
               </div>
             </Card>
@@ -819,7 +1052,7 @@ export default function MarketMvpApp() {
               </div>
               <div className="space-y-3">
                 {outgoing.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有发出申请' : 'No outgoing requests'} /> : outgoing.map((connection) => (
-                  <ConnectionItem key={connection.id} connection={connection} locale={locale} />
+                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onViewProfile={openProfile} onCancel={cancelRequest} />
                 ))}
               </div>
             </Card>
@@ -830,13 +1063,13 @@ export default function MarketMvpApp() {
               </div>
               <div className="space-y-3">
                 {connected.length === 0 ? <EmptyState label={locale === 'zh' ? '通过后会显示在这里' : 'Approved matches appear here'} /> : connected.map((connection) => (
-                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onOpenChat={openChat} />
+                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onViewProfile={openProfile} onOpenChat={openChat} />
                 ))}
               </div>
             </Card>
           </div>
         </div>
-        {notice ? <Toast message={notice} /> : null}
+        {notice ? <Toast notice={notice} /> : null}
       </div>
     );
   }
@@ -846,15 +1079,15 @@ export default function MarketMvpApp() {
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} currentScreen={copy.chat} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.chat} />
         <div className="grid min-h-[calc(100vh-72px)] lg:grid-cols-[320px_1fr]">
-          <div className="border-r border-[#D8D0C4] bg-white p-5">
+          <div className="border-r border-[#D8D0C4] bg-white p-5 overflow-y-auto">
             <button onClick={() => setScreen('connections')} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
               <ArrowLeft size={16} /> {locale === 'zh' ? '返回连接页' : 'Back to connections'}
             </button>
             {otherProfile ? (
-              <>
-                <div className="mb-4 rounded-2xl border border-[#D8D0C4] bg-[#FAFAF8] p-4">
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[#D8D0C4] bg-[#FAFAF8] p-4">
                   <div className="text-xs font-mono text-[#7A6E62]">{otherProfile.childAlias}</div>
                   <div className="mt-1 text-xl font-semibold">{otherProfile.gender} · {formatAge(otherProfile)}</div>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -863,16 +1096,35 @@ export default function MarketMvpApp() {
                     <Badge>{otherProfile.industry}</Badge>
                   </div>
                 </div>
-                <div className="space-y-2 text-sm text-[#5A5248]">
-                  <div>{otherProfile.school}</div>
-                  <div>{otherProfile.jobTitle}</div>
-                  <div>{otherProfile.preferences}</div>
+                <div className="space-y-4 rounded-2xl border border-[#D8D0C4] bg-white p-4">
+                  <div>
+                    <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-[#7A6E62]">{locale === 'zh' ? '完整档案' : 'Full profile'}</div>
+                    <div className="mt-2 text-sm text-[#5A5248]">{otherProfile.city} · {otherProfile.hukou}</div>
+                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.education} · {otherProfile.school}</div>
+                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.industry} · {otherProfile.jobTitle}</div>
+                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.income}</div>
+                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.property} · {otherProfile.car}</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {otherProfile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '简介' : 'About'}</div>
+                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.about}</p>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '爱好' : 'Hobbies'}</div>
+                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.hobbies}</p>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '择偶要求' : 'Preferences'}</div>
+                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.preferences}</p>
+                  </div>
                 </div>
-              </>
+              </div>
             ) : null}
           </div>
           <div className="flex min-h-0 flex-col">
-            <div className="border-b border-[#D8D0C4] bg-[#FDF6E3] px-6 py-3 text-xs text-[#7A5A10]">{locale === 'zh' ? '连接成功后才能进入私聊。请勿在这里泄露真实姓名和联系方式。' : 'Chat unlocks only after approval. Please avoid sharing real names or contact details here.'}</div>
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
               {chat.messages.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有消息，先发第一条吧' : 'No messages yet. Send the first one.'} /> : chat.messages.map((message) => (
                 <MessageBubble
@@ -888,25 +1140,24 @@ export default function MarketMvpApp() {
                   value={messageText}
                   onChange={(event) => setMessageText(event.target.value)}
                   placeholder={locale === 'zh' ? '输入消息...' : 'Type a message...'}
-                  className="flex-1 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
+                    className="flex-1 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
                 />
-                <button onClick={sendChatMessage} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white">
+                <button onClick={sendChatMessage} className="inline-flex items-center gap-2 rounded-xl bg-[#A87C1A] px-5 py-3 text-sm font-medium text-white">
                   <Send size={16} /> {locale === 'zh' ? '发送' : 'Send'}
                 </button>
               </div>
             </div>
           </div>
         </div>
-        {notice ? <Toast message={notice} /> : null}
+        {notice ? <Toast notice={notice} /> : null}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-      <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} currentScreen={copy.browse} />
+      <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
+      <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
       <div className="mx-auto max-w-7xl px-6 py-8">
-        {ownProfile ? null : <Card className="mb-6 border-[#E8D49A] bg-[#FDF6E3] p-4 text-sm text-[#7A5A10]">{copy.completeProfileNotice}</Card>}
         <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_180px_180px_160px]">
           <label className="block lg:col-span-1">
             <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '搜索' : 'Search'}</div>
@@ -916,13 +1167,13 @@ export default function MarketMvpApp() {
                 value={filters.search}
                 onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
                 placeholder={copy.searchPlaceholder}
-                className="w-full rounded-xl border border-[#D8D0C4] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#B5272A]"
+                className="w-full rounded-xl border border-[#D8D0C4] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#A87C1A]"
               />
             </div>
           </label>
           <label className="block">
             <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '性别' : 'Gender'}</div>
-            <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+            <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]">
               <option value="all">All</option>
               <option value="男">男</option>
               <option value="女">女</option>
@@ -930,7 +1181,7 @@ export default function MarketMvpApp() {
           </label>
           <label className="block">
             <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '排序' : 'Sort'}</div>
-            <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+            <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]">
               <option value="latest">Latest</option>
               <option value="age-asc">Age asc</option>
               <option value="age-desc">Age desc</option>
@@ -938,7 +1189,7 @@ export default function MarketMvpApp() {
             </select>
           </label>
           <div className="flex items-end gap-2">
-            <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(String(error.message || error)))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#B5272A] px-4 py-3 text-sm font-medium text-white">
+            <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#A87C1A] px-4 py-3 text-sm font-medium text-white">
               <Search size={16} /> {locale === 'zh' ? '刷新' : 'Refresh'}
             </button>
           </div>
@@ -946,66 +1197,97 @@ export default function MarketMvpApp() {
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold">{locale === 'zh' ? '相亲角浏览' : 'Browse profiles'}</div>
-            <div className="text-[10px] font-mono text-[#7A6E62]">{locale === 'zh' ? '浏览其他家长发布的匿名子女档案' : 'Browse anonymous child profiles posted by other parents'}</div>
+            <div className="text-2xl font-semibold">{locale === 'zh' ? '相亲角浏览' : 'Browse profiles'}</div>
+            <div className="text-xs font-mono text-[#7A6E62]">{locale === 'zh' ? '浏览其他家长发布的匿名子女档案' : 'Browse anonymous child profiles posted by other parents'}</div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge tone="red">{profiles.length} profiles</Badge>
+            <Badge tone="gold">{profiles.length} profiles</Badge>
             <Badge tone="green">{incomingCount} {copy.incoming}</Badge>
             <Badge tone="default">{connectedCount} {copy.connected}</Badge>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredProfiles.map((profile) => (
-            <Card key={profile.id} className="overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="border-b border-[#EEE9E0] p-5">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-semibold">{profile.gender} · {formatAge(profile)}</div>
-                    <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">{profile.city} · {profile.hukou} · {profile.education}</div>
+          {filteredProfiles.filter((profile) => !ownProfile || profile.id !== ownProfile.id).map((profile) => {
+            const connectionState = getProfileConnectionState(profile.id, connections);
+            const isPending = connectionState === 'pending';
+            const isConnected = connectionState === 'connected';
+
+            return (
+              <Card key={profile.id} className="overflow-hidden transition hover:-translate-y-0.5 hover:shadow-md">
+                <div className="border-b border-[#EEE9E0] p-5">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-semibold">{profile.gender} · {formatAge(profile)}</div>
+                      <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">{profile.city} · {profile.hukou} · {profile.education}</div>
+                    </div>
+                    <ProfilePill profile={profile} />
                   </div>
-                  <ProfilePill profile={profile} />
+                  <div className="flex flex-wrap gap-2">{profile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
                 </div>
-                <div className="flex flex-wrap gap-2">{profile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
-              </div>
-              <div className="p-5">
-                <div className="space-y-2 text-sm text-[#5A5248]">
-                  <div>{profile.school} · {profile.major}</div>
-                  <div>{profile.industry} · {profile.jobTitle}</div>
-                  <div>{profile.income}</div>
+                <div className="p-5">
+                  <div className="space-y-2 text-sm text-[#5A5248]">
+                    <div>{profile.school} · {profile.major}</div>
+                    <div>{profile.industry} · {profile.jobTitle}</div>
+                    <div>{profile.income}</div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
+                      {locale === 'zh' ? '查看详情' : 'View detail'}
+                    </button>
+                    <button
+                      onClick={() => { if (!isPending && !isConnected) { void requestConnect(profile.id); } }}
+                      disabled={isPending || isConnected}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors ${isPending || isConnected ? 'bg-[#2C8A4A]' : 'bg-[#A87C1A]'}`}
+                    >
+                      {isConnected ? <CheckCircle2 size={16} /> : isPending ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                      {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '已发送' : 'Requested') : ''}
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 flex gap-2">
-                  <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
-                    {locale === 'zh' ? '查看详情' : 'View detail'}
-                  </button>
-                  <button onClick={() => requestConnect(profile.id)} className="inline-flex items-center justify-center rounded-xl bg-[#B5272A] px-4 py-3 text-sm font-medium text-white">
-                    <UserPlus size={16} />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
-      {notice ? <Toast message={notice} /> : null}
+      {notice ? <Toast notice={notice} /> : null}
     </div>
   );
 }
 
-function AppHeader({ copy, locale, onToggleLocale, onSignOut, currentScreen }: { copy: Copy; locale: Locale; onToggleLocale: () => void; onSignOut: () => void; currentScreen: string }) {
+function AppHeader({ copy, locale, onToggleLocale, onSignOut, onLogoClick, onProfileClick, onConnectionsClick, currentScreen }: { copy: Copy; locale: Locale; onToggleLocale: () => void; onSignOut: () => void; onLogoClick?: () => void; onProfileClick?: () => void; onConnectionsClick?: () => void; currentScreen: string }) {
   return (
     <header className="sticky top-0 z-20 border-b border-[#D8D0C4] bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
-          <div>
-            <div className="font-semibold">{copy.appName}</div>
-            <div className="text-[10px] font-mono text-[#7A6E62]">{currentScreen}</div>
+        {onLogoClick ? (
+          <button onClick={onLogoClick} className="flex items-center gap-3 text-left">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
+            <div>
+              <div className="font-semibold">{copy.appName}</div>
+              <div className="text-[10px] font-mono text-[#7A6E62]">{currentScreen}</div>
+            </div>
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
+            <div>
+              <div className="font-semibold">{copy.appName}</div>
+              <div className="text-[10px] font-mono text-[#7A6E62]">{currentScreen}</div>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex items-center gap-2">
-          <button onClick={onToggleLocale} className="rounded-full border border-[#D8D0C4] bg-[#FAFAF8] px-3 py-2 text-xs text-[#5A5248]">
+          {onConnectionsClick ? (
+            <button onClick={onConnectionsClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
+              {copy.myConnections}
+            </button>
+          ) : null}
+          {onProfileClick ? (
+            <button onClick={onProfileClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
+              {copy.myProfile}
+            </button>
+          ) : null}
+          <button onClick={onToggleLocale} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
             <Globe2 className="mr-2 inline-block" size={14} /> {locale === 'zh' ? 'English' : '中文'}
           </button>
           <button onClick={onSignOut} className="rounded-full border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">
@@ -1017,15 +1299,25 @@ function AppHeader({ copy, locale, onToggleLocale, onSignOut, currentScreen }: {
   );
 }
 
-function Toast({ message }: { message: string }) {
-  return <div className="fixed bottom-6 right-6 rounded-xl bg-[#1A1208] px-4 py-3 text-sm text-white shadow-lg">{message}</div>;
+function Toast({ notice }: { notice: { message: string; tone: 'error' | 'success' } }) {
+  const toneClasses = notice.tone === 'success'
+    ? 'border-[#9ED6AA] bg-[#1F6B3A] text-white'
+    : 'border-[#F5B6B6] bg-[#B91C1C] text-white';
+
+  return (
+    <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-2xl border px-5 py-3 text-sm shadow-xl transition-all duration-300 ease-out animate-in slide-in-from-top-2">
+      <div className={`rounded-xl px-4 py-2 ${toneClasses}`}>
+        {notice.message}
+      </div>
+    </div>
+  );
 }
 
 function EmptyState({ label }: { label: string }) {
   return <div className="rounded-xl border border-dashed border-[#D8D0C4] bg-[#FAFAF8] p-4 text-sm text-[#7A6E62]">{label}</div>;
 }
 
-function ConnectionItem({ connection, locale, onApprove, onReject, onOpenChat }: { connection: ConnectionRecord; locale: Locale; onApprove?: (id: string) => Promise<void>; onReject?: (id: string) => Promise<void>; onOpenChat?: (id: string) => Promise<void>; }) {
+function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile, onCancel, onOpenChat }: { connection: ConnectionRecord; locale: Locale; onApprove?: (id: string) => Promise<void>; onReject?: (id: string) => Promise<void>; onViewProfile?: (id: string) => Promise<void>; onCancel?: (id: string) => Promise<void>; onOpenChat?: (id: string) => Promise<void>; }) {
   const profile = connection.otherProfile ?? connection.targetProfile ?? connection.requesterProfile;
   if (!profile) {
     return null;
@@ -1042,9 +1334,11 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onOpenChat }:
       </div>
       <div className="mt-3 flex flex-wrap gap-2">{profile.traits.slice(0, 3).map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
       <div className="mt-4 flex gap-2">
+        {onViewProfile ? <button onClick={() => void onViewProfile(profile.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '查看完整档案' : 'View full profile'}</button> : null}
         {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
         {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
-        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
+        {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
+        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#A87C1A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
       </div>
     </div>
   );
@@ -1053,7 +1347,7 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onOpenChat }:
 function MessageBubble({ message, mine }: { message: MessageRecord; mine: boolean }) {
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-xl rounded-2xl px-4 py-3 text-sm leading-7 ${mine ? 'bg-[#B5272A] text-white' : 'border border-[#D8D0C4] bg-white text-[#1A1208]'}`}>
+      <div className={`max-w-xl rounded-2xl px-4 py-3 text-sm leading-7 ${mine ? 'bg-[#A87C1A] text-white' : 'border border-[#D8D0C4] bg-white text-[#1A1208]'}`}>
         {message.text}
       </div>
     </div>

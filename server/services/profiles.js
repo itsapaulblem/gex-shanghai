@@ -1,5 +1,33 @@
 import { createId, getState, toPublicProfile, withState } from '../store.js';
 
+function buildProfilePayload(input) {
+  return {
+    honorific: input.honorific?.trim() ?? '',
+    surname: input.surname?.trim() ?? '',
+    childAlias: input.childAlias.trim(),
+    gender: input.gender,
+    birthYear: Number(input.birthYear),
+    age: Number(input.age),
+    height: Number(input.height),
+    weight: Number(input.weight),
+    city: input.city.trim(),
+    hukou: input.hukou.trim(),
+    hometown: input.hometown.trim(),
+    education: input.education.trim(),
+    school: input.school.trim(),
+    major: input.major.trim(),
+    industry: input.industry.trim(),
+    jobTitle: input.jobTitle.trim(),
+    income: input.income.trim(),
+    property: input.property.trim(),
+    car: input.car.trim(),
+    traits: input.traits.filter(Boolean).map((item) => item.trim()),
+    hobbies: input.hobbies.trim(),
+    about: input.about.trim(),
+    preferences: input.preferences.trim(),
+  };
+}
+
 function applyFilters(profiles, filters = {}) {
   const search = (filters.search ?? '').trim().toLowerCase();
   const gender = filters.gender ?? 'all';
@@ -79,27 +107,7 @@ async function createProfile(userId, input) {
     const profile = {
       id: createId('profile'),
       ownerUserId: userId,
-      childAlias: input.childAlias.trim(),
-      gender: input.gender,
-      birthYear: Number(input.birthYear),
-      age: Number(input.age),
-      height: Number(input.height),
-      weight: Number(input.weight),
-      city: input.city.trim(),
-      hukou: input.hukou.trim(),
-      hometown: input.hometown.trim(),
-      education: input.education.trim(),
-      school: input.school.trim(),
-      major: input.major.trim(),
-      industry: input.industry.trim(),
-      jobTitle: input.jobTitle.trim(),
-      income: input.income.trim(),
-      property: input.property.trim(),
-      car: input.car.trim(),
-      traits: input.traits.filter(Boolean).map((item) => item.trim()),
-      hobbies: input.hobbies.trim(),
-      about: input.about.trim(),
-      preferences: input.preferences.trim(),
+      ...buildProfilePayload(input),
       createdAt: new Date().toISOString(),
     };
 
@@ -108,4 +116,18 @@ async function createProfile(userId, input) {
   });
 }
 
-export { createProfile, getProfile, listProfiles };
+async function updateOwnProfile(userId, input) {
+  return withState(async (state) => {
+    const profile = state.profiles.find((candidate) => candidate.ownerUserId === userId);
+    if (!profile) {
+      const error = new Error('PROFILE_NOT_FOUND');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    Object.assign(profile, buildProfilePayload(input));
+    return profile;
+  });
+}
+
+export { createProfile, getProfile, listProfiles, updateOwnProfile };

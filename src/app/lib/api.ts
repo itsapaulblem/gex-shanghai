@@ -5,11 +5,15 @@ export interface UserRecord {
   email: string;
   createdAt: string;
   language: Locale;
+  passwordHash?: string;
+  passwordSalt?: string | null;
 }
 
 export interface ProfileRecord {
   id: string;
   ownerUserId: string;
+  honorific?: string;
+  surname?: string;
   childAlias: string;
   gender: '男' | '女';
   birthYear: number;
@@ -96,10 +100,12 @@ export const api = {
   },
   getProfile: (token: string, id: string) => requestJson<{ profile: ProfileRecord }>(`/api/profiles/${id}`, {}, token),
   createProfile: (token: string, data: Record<string, unknown>) => requestJson<{ profile: ProfileRecord }>('/api/profiles', { method: 'POST', body: JSON.stringify(data) }, token),
+  updateOwnProfile: (token: string, data: Record<string, unknown>) => requestJson<{ profile: ProfileRecord }>('/api/profiles/me', { method: 'PATCH', body: JSON.stringify(data) }, token),
   listConnections: (token: string) => requestJson<{ ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] }>('/api/connections', {}, token),
   requestConnection: (token: string, targetProfileId: string) => requestJson<{ connection: ConnectionRecord }>('/api/connections', { method: 'POST', body: JSON.stringify({ targetProfileId }) }, token),
   approveConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/approve`, { method: 'POST' }, token),
   rejectConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/reject`, { method: 'POST' }, token),
+  cancelConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/cancel`, { method: 'POST' }, token),
   loadChat: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord; messages: MessageRecord[] }>(`/api/chats/${connectionId}`, {}, token),
   sendMessage: (token: string, connectionId: string, text: string) => requestJson<{ message: MessageRecord }>(`/api/chats/${connectionId}/messages`, { method: 'POST', body: JSON.stringify({ text }) }, token),
 };

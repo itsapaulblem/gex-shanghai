@@ -48,6 +48,37 @@
       "passwordHash": "5bf5d859febc9ad0d4f6912b2304105678d09d3a0fb34bbf5559f216e4db08da",
       "createdAt": "2026-07-18T04:34:59.444Z",
       "language": "en"
+    },
+    {
+      "id": "user_42a0546c",
+      "email": "paulcheng46d@gmail.com",
+      "passwordHash": "03f27fc939fb3cd331e8773dae56a50b67a30f0ed22ae0f95e7e8c9a36ae56c6",
+      "createdAt": "2026-07-18T05:00:15.291Z",
+      "language": "en"
+    },
+    {
+      "id": "user_440418ff",
+      "email": "paulcheng151@gmail.com",
+      "passwordSalt": "19f8edee1f4cc6972438d0455be44bef",
+      "passwordHash": "9e47974c45768a2bdacef8f3358c6df46f9987bd0701b04f7103e07c01da599b",
+      "createdAt": "2026-07-18T05:22:25.024Z",
+      "language": "en"
+    },
+    {
+      "id": "user_8d82b945",
+      "email": "e1121941@u.nus.edu",
+      "passwordSalt": "11fa918fa4ca9a0390ce8a467987a80d",
+      "passwordHash": "2e4af488968228641236bd67d5be596a119bbe418beca1cbd25901b4a1f51a52",
+      "createdAt": "2026-07-18T13:24:42.735Z",
+      "language": "en"
+    },
+    {
+      "id": "user_f47af986",
+      "email": "e1ww121941@u.nus.edu",
+      "passwordSalt": "1308144f72463bc83e393d5acce16b2b",
+      "passwordHash": "a3e9f10e8fbfbe8c52c131fe59a1ca1cd603b5862c27b1c8f06413cad24e224f",
+      "createdAt": "2026-07-18T13:30:49.406Z",
+      "language": "en"
     }
   ],
   "sessions": [
@@ -55,6 +86,26 @@
       "token": "492a8afe-9ea9-49e1-ad61-214d81e306ea",
       "userId": "user_db3e9485",
       "createdAt": "2026-07-18T04:34:59.444Z"
+    },
+    {
+      "token": "ea98e1f9-b4e2-4b8d-8d43-1862cc0c85b9",
+      "userId": "user_42a0546c",
+      "createdAt": "2026-07-18T05:00:15.291Z"
+    },
+    {
+      "token": "a4d22835-6377-4c24-93cf-c48cbc374eb8",
+      "userId": "user_440418ff",
+      "createdAt": "2026-07-18T05:22:25.024Z"
+    },
+    {
+      "token": "46fc555e-ed6d-4b56-86b0-44bfac49b330",
+      "userId": "user_8d82b945",
+      "createdAt": "2026-07-18T13:24:42.735Z"
+    },
+    {
+      "token": "c1204ce1-51af-4794-aa60-254cbbfbaeb5",
+      "userId": "user_f47af986",
+      "createdAt": "2026-07-18T13:30:49.406Z"
     }
   ],
   "profiles": [
@@ -267,6 +318,132 @@
       "about": "",
       "preferences": "",
       "createdAt": "2026-07-18T04:35:20.623Z"
+    },
+    {
+      "id": "profile_c7513cb6",
+      "ownerUserId": "user_42a0546c",
+      "childAlias": "",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "",
+      "major": "",
+      "industry": "",
+      "jobTitle": "",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "踏实",
+        "孝顺",
+        "爱运动"
+      ],
+      "hobbies": "",
+      "about": "",
+      "preferences": "",
+      "createdAt": "2026-07-18T05:03:07.982Z"
+    },
+    {
+      "id": "profile_9d0ae5c1",
+      "ownerUserId": "user_440418ff",
+      "honorific": "Mr",
+      "surname": "dvfdss",
+      "childAlias": "rgr",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "sdgs",
+      "major": "xvbds",
+      "industry": "sdf",
+      "jobTitle": "sdvdg",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "踏实",
+        "孝顺",
+        "爱运动"
+      ],
+      "hobbies": "sd",
+      "about": "xdvds",
+      "preferences": "ssds",
+      "createdAt": "2026-07-18T05:25:32.890Z"
+    },
+    {
+      "id": "profile_b2ba7c9a",
+      "ownerUserId": "user_8d82b945",
+      "honorific": "Mr",
+      "surname": "Cheng",
+      "childAlias": "Paul",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "dweef",
+      "major": "fcwewe",
+      "industry": "wef",
+      "jobTitle": "wfefe",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "踏实",
+        "孝顺",
+        "爱运动"
+      ],
+      "hobbies": "vverd",
+      "about": "rverr",
+      "preferences": "revgr",
+      "createdAt": "2026-07-18T13:28:38.394Z"
+    },
+    {
+      "id": "profile_c8192c4f",
+      "ownerUserId": "user_f47af986",
+      "honorific": "Mr",
+      "surname": "Cheng",
+      "childAlias": "Paul",
+      "gender": "男",
+      "birthYear": 2005,
+      "age": 20,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "dweef",
+      "major": "fcwewe",
+      "industry": "wef",
+      "jobTitle": "wfefe",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "踏实",
+        "孝顺",
+        "爱运动"
+      ],
+      "hobbies": "football",
+      "about": "rverrcscf",
+      "preferences": "revgrdvs",
+      "createdAt": "2026-07-18T13:31:04.638Z"
     }
   ],
   "connections": [
@@ -279,7 +456,65 @@
       "status": "pending",
       "createdAt": "2026-07-18T04:35:25.422Z",
       "updatedAt": "2026-07-18T04:35:25.422Z"
+    },
+    {
+      "id": "connection_249d7b63",
+      "requesterUserId": "user_42a0546c",
+      "requesterProfileId": "profile_c7513cb6",
+      "targetUserId": "user_db3e9485",
+      "targetProfileId": "profile_437e70b3",
+      "status": "rejected",
+      "createdAt": "2026-07-18T05:03:21.174Z",
+      "updatedAt": "2026-07-18T05:12:13.139Z"
+    },
+    {
+      "id": "connection_a89d35a6",
+      "requesterUserId": "user_db3e9485",
+      "requesterProfileId": "profile_437e70b3",
+      "targetUserId": "user_seed_5",
+      "targetProfileId": "profile_4",
+      "status": "pending",
+      "createdAt": "2026-07-18T05:12:47.241Z",
+      "updatedAt": "2026-07-18T05:12:47.242Z"
+    },
+    {
+      "id": "connection_199ef426",
+      "requesterUserId": "user_440418ff",
+      "requesterProfileId": "profile_9d0ae5c1",
+      "targetUserId": "user_seed_5",
+      "targetProfileId": "profile_4",
+      "status": "pending",
+      "createdAt": "2026-07-18T05:25:57.511Z",
+      "updatedAt": "2026-07-18T05:25:57.511Z"
+    },
+    {
+      "id": "connection_7b411bbf",
+      "requesterUserId": "user_f47af986",
+      "requesterProfileId": "profile_c8192c4f",
+      "targetUserId": "user_8d82b945",
+      "targetProfileId": "profile_b2ba7c9a",
+      "status": "approved",
+      "createdAt": "2026-07-18T13:31:11.489Z",
+      "updatedAt": "2026-07-18T13:32:50.873Z"
+    },
+    {
+      "id": "connection_a3dada33",
+      "requesterUserId": "user_f47af986",
+      "requesterProfileId": "profile_c8192c4f",
+      "targetUserId": "user_440418ff",
+      "targetProfileId": "profile_9d0ae5c1",
+      "status": "pending",
+      "createdAt": "2026-07-18T13:31:12.858Z",
+      "updatedAt": "2026-07-18T13:31:12.858Z"
     }
   ],
-  "messages": []
+  "messages": [
+    {
+      "id": "message_4426fe96",
+      "connectionId": "connection_7b411bbf",
+      "senderUserId": "user_8d82b945",
+      "text": "hello",
+      "createdAt": "2026-07-18T13:32:57.355Z"
+    }
+  ]
 }
