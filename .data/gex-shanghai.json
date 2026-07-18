@@ -2,59 +2,67 @@
   "users": [
     {
       "id": "user_seed_1",
-      "email": "demo@shanghai.cn",
+      "email": "wang.mei@example.cn",
       "passwordHash": "0ead2060b65992dca4769af601a1b3a35ef38cfad2c2c465bb160ea764157c5d",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-18T13:31:04.502Z"
     },
     {
       "id": "user_seed_2",
       "email": "li.yun@example.cn",
       "passwordHash": "3769940fd81f285997e29c177993afdd1218aebc5c09981129f5370384bfe9ec",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-18T12:36:04.502Z"
     },
     {
       "id": "user_seed_3",
       "email": "chen.xi@example.cn",
       "passwordHash": "8e35d79ac20cfbd8922402b8c616cab053cbb21580337f53dcc278bbe2f9abae",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-18T10:51:04.502Z"
     },
     {
       "id": "user_seed_4",
       "email": "wu.qing@example.cn",
       "passwordHash": "8f263000a914eb660f87d2f80d29add4de4e60beba6f6af785e9f173c7714bbd",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-18T05:51:04.502Z"
     },
     {
       "id": "user_seed_5",
       "email": "yang.yue@example.cn",
       "passwordHash": "4e5f4a728f258eb3e5b85f0cf120aa28a714ffb3f36e4869ee35d908ee231447",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-17T13:51:04.502Z"
     },
     {
       "id": "user_seed_6",
       "email": "zhang.lei@example.cn",
       "passwordHash": "f30737bc4d53512e0cd7c02f092d2800cbb4a5b43f9142bfe8f0383b385a466d",
       "createdAt": "2026-07-18T03:55:55.751Z",
-      "language": "zh"
+      "language": "zh",
+      "lastSeenAt": "2026-07-15T13:51:04.502Z"
     },
     {
       "id": "user_db3e9485",
       "email": "paulcheng46@gmail.com",
       "passwordHash": "5bf5d859febc9ad0d4f6912b2304105678d09d3a0fb34bbf5559f216e4db08da",
       "createdAt": "2026-07-18T04:34:59.444Z",
-      "language": "en"
+      "language": "en",
+      "lastSeenAt": "2026-07-18T13:21:04.502Z"
     },
     {
       "id": "user_42a0546c",
       "email": "paulcheng46d@gmail.com",
       "passwordHash": "03f27fc939fb3cd331e8773dae56a50b67a30f0ed22ae0f95e7e8c9a36ae56c6",
       "createdAt": "2026-07-18T05:00:15.291Z",
-      "language": "en"
+      "language": "en",
+      "lastSeenAt": "2026-07-18T13:21:04.502Z"
     },
     {
       "id": "user_440418ff",
@@ -62,7 +70,8 @@
       "passwordSalt": "19f8edee1f4cc6972438d0455be44bef",
       "passwordHash": "9e47974c45768a2bdacef8f3358c6df46f9987bd0701b04f7103e07c01da599b",
       "createdAt": "2026-07-18T05:22:25.024Z",
-      "language": "en"
+      "language": "en",
+      "lastSeenAt": "2026-07-18T13:21:04.502Z"
     },
     {
       "id": "user_8d82b945",
@@ -70,7 +79,8 @@
       "passwordSalt": "11fa918fa4ca9a0390ce8a467987a80d",
       "passwordHash": "2e4af488968228641236bd67d5be596a119bbe418beca1cbd25901b4a1f51a52",
       "createdAt": "2026-07-18T13:24:42.735Z",
-      "language": "en"
+      "language": "en",
+      "lastSeenAt": "2026-07-18T14:00:05.793Z"
     },
     {
       "id": "user_f47af986",
@@ -78,7 +88,8 @@
       "passwordSalt": "1308144f72463bc83e393d5acce16b2b",
       "passwordHash": "a3e9f10e8fbfbe8c52c131fe59a1ca1cd603b5862c27b1c8f06413cad24e224f",
       "createdAt": "2026-07-18T13:30:49.406Z",
-      "language": "en"
+      "language": "en",
+      "lastSeenAt": "2026-07-18T13:21:04.502Z"
     }
   ],
   "sessions": [

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { createId, getState, hashPassword, sanitizeUser, withState } from '../store.js';
+import { createId, getState, hashPassword, sanitizeUser, touchUserActivity, withState } from '../store.js';
 
 function verifyPassword(password, user) {
   const candidate = user.passwordSalt ? hashPassword(password, user.passwordSalt) : hashPassword(password);
@@ -68,6 +68,7 @@ async function register({ email, password, language = 'zh' }) {
 
     state.users.push(user);
     state.sessions.push(session);
+    touchUserActivity(user.id, session.createdAt);
 
     return {
       token: session.token,
@@ -99,6 +100,8 @@ async function login({ email, password }) {
       state.sessions.push(session);
     }
 
+    touchUserActivity(user.id);
+
     const profile = state.profiles.find((candidate) => candidate.ownerUserId === user.id) ?? null;
 
     return {
@@ -124,6 +127,7 @@ async function resolveSession(token) {
   }
 
   const profile = state.profiles.find((candidate) => candidate.ownerUserId === user.id) ?? null;
+  touchUserActivity(user.id);
 
   return {
     token,
@@ -139,6 +143,7 @@ async function updateLanguage(userId, language) {
       return null;
     }
     user.language = language;
+    touchUserActivity(user.id);
     return createSessionUser(user);
   });
 }

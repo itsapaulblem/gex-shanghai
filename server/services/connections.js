@@ -1,4 +1,15 @@
-import { createId, getState, toPublicProfile, withState } from '../store.js';
+import { createId, getState, getUserPresence, toPublicProfile, withState } from '../store.js';
+
+function decorateProfile(profile, state) {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    ...toPublicProfile(profile),
+    presence: getUserPresence(profile.ownerUserId, state),
+  };
+}
 
 function getParticipantProfileIds(connection) {
   return [connection.requesterProfileId, connection.targetProfileId];
@@ -16,10 +27,10 @@ function computeConnectionView(connection, userId, state) {
 
   return {
     ...connection,
-    requesterProfile: toPublicProfile(requesterProfile),
-    targetProfile: toPublicProfile(targetProfile),
-    ownProfile: toPublicProfile(ownProfile),
-    otherProfile: toPublicProfile(otherProfile),
+    requesterProfile: decorateProfile(requesterProfile, state),
+    targetProfile: decorateProfile(targetProfile, state),
+    ownProfile: decorateProfile(ownProfile, state),
+    otherProfile: decorateProfile(otherProfile, state),
     direction: isRequester ? 'outgoing' : isTarget ? 'incoming' : 'other',
   };
 }
@@ -76,7 +87,7 @@ async function listConnections(userId) {
   const connected = relevant.filter((connection) => connection.status === 'approved').map((connection) => computeConnectionView(connection, userId, state));
 
   return {
-    ownProfile: toPublicProfile(ownProfile),
+    ownProfile: decorateProfile(ownProfile, state),
     incoming,
     outgoing,
     connected,

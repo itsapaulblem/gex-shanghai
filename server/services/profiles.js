@@ -1,4 +1,15 @@
-import { createId, getState, toPublicProfile, withState } from '../store.js';
+import { createId, getState, getUserPresence, toPublicProfile, withState } from '../store.js';
+
+function toProfileResponse(profile, state) {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    ...toPublicProfile(profile),
+    presence: getUserPresence(profile.ownerUserId, state),
+  };
+}
 
 function buildProfilePayload(input) {
   return {
@@ -73,8 +84,8 @@ async function listProfiles(userId, filters = {}) {
   const filteredProfiles = sortProfiles(applyFilters(profiles, filters), filters.sort);
 
   return {
-    ownProfile: toPublicProfile(ownProfile),
-    profiles: filteredProfiles.map(toPublicProfile),
+    ownProfile: toProfileResponse(ownProfile, state),
+    profiles: filteredProfiles.map((profile) => toProfileResponse(profile, state)),
   };
 }
 
@@ -92,7 +103,7 @@ async function getProfile(profileId, userId) {
     return profile;
   }
 
-  return toPublicProfile(profile);
+  return toProfileResponse(profile, state);
 }
 
 async function createProfile(userId, input) {
@@ -112,7 +123,7 @@ async function createProfile(userId, input) {
     };
 
     state.profiles.push(profile);
-    return profile;
+    return toProfileResponse(profile, state);
   });
 }
 
@@ -126,7 +137,7 @@ async function updateOwnProfile(userId, input) {
     }
 
     Object.assign(profile, buildProfilePayload(input));
-    return profile;
+    return toProfileResponse(profile, state);
   });
 }
 

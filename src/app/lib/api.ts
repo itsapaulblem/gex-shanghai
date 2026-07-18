@@ -12,6 +12,10 @@ export interface UserRecord {
 export interface ProfileRecord {
   id: string;
   ownerUserId: string;
+  presence?: {
+    status: 'online' | 'offline';
+    lastSeenAt: string | null;
+  };
   honorific?: string;
   surname?: string;
   childAlias: string;

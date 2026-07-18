@@ -31,7 +31,7 @@ function seedState() {
   const seededUsers = [
     {
       id: 'user_seed_1',
-      email: 'demo@shanghai.cn',
+      email: 'wang.mei@example.cn',
       passwordHash: hashPassword('demo1234'),
       createdAt: new Date().toISOString(),
       language: 'zh',
@@ -272,6 +272,43 @@ async function loadState() {
         await saveState();
       }
 
+      const fallbackSeenAt = new Date().toISOString();
+      let stateChanged = false;
+      for (const user of state.users) {
+        const seedEmailMap = {
+          user_seed_1: 'wang.mei@example.cn',
+          user_seed_2: 'li.yun@example.cn',
+          user_seed_3: 'chen.xi@example.cn',
+          user_seed_4: 'wu.qing@example.cn',
+          user_seed_5: 'yang.yue@example.cn',
+          user_seed_6: 'zhang.lei@example.cn',
+        };
+
+        if (seedEmailMap[user.id] && user.email !== seedEmailMap[user.id]) {
+          user.email = seedEmailMap[user.id];
+          stateChanged = true;
+        }
+
+        if (!user.lastSeenAt) {
+          const seedLastSeenOffsetMinutes = {
+            user_seed_1: 20,
+            user_seed_2: 75,
+            user_seed_3: 180,
+            user_seed_4: 480,
+            user_seed_5: 1440,
+            user_seed_6: 4320,
+          };
+
+          const offsetMinutes = seedLastSeenOffsetMinutes[user.id] ?? 30;
+          user.lastSeenAt = new Date(Date.now() - offsetMinutes * 60000).toISOString();
+          stateChanged = true;
+        }
+      }
+
+      if (stateChanged) {
+        await saveState();
+      }
+
       return state;
     })();
   }
@@ -296,6 +333,34 @@ function getState() {
     throw new Error('State has not been loaded yet.');
   }
   return state;
+}
+
+function touchUserActivity(userId, lastSeenAt = new Date().toISOString()) {
+  const currentState = getState();
+  const user = currentState.users.find((candidate) => candidate.id === userId);
+  if (!user) {
+    return null;
+  }
+
+  user.lastSeenAt = lastSeenAt;
+  return user;
+}
+
+function getUserPresence(userId, currentState = getState()) {
+  const user = currentState.users.find((candidate) => candidate.id === userId) ?? null;
+  if (!user) {
+    return { status: 'offline', lastSeenAt: null };
+  }
+
+  const lastSeenAt = user.lastSeenAt ?? user.createdAt ?? null;
+  const lastSeenMs = lastSeenAt ? new Date(lastSeenAt).getTime() : 0;
+  const hasActiveSession = currentState.sessions.some((session) => session.userId === userId);
+  const online = hasActiveSession && lastSeenMs > 0 && Date.now() - lastSeenMs < 5 * 60 * 1000;
+
+  return {
+    status: online ? 'online' : 'offline',
+    lastSeenAt,
+  };
 }
 
 function sanitizeUser(user) {
@@ -324,9 +389,11 @@ export {
   findProfileByOwner,
   getState,
   hashPassword,
+  getUserPresence,
   loadState,
   sanitizeUser,
   saveState,
+  touchUserActivity,
   toPublicProfile,
   withState,
   hashPassword as hash,

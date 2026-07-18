@@ -192,6 +192,25 @@ const INCOME_OPTIONS = [
   '8万/月以上',
 ];
 
+const AGE_RANGE_OPTIONS = [
+  { label: 'Any age', value: 'all' },
+  { label: '20-25', value: '20-25' },
+  { label: '26-30', value: '26-30' },
+  { label: '31-35', value: '31-35' },
+  { label: '36-40', value: '36-40' },
+  { label: '40+', value: '40+' },
+];
+
+const SALARY_RANGE_OPTIONS = [
+  { label: 'Any salary', value: 'all' },
+  { label: '0-1万/月', value: '0-1万/月' },
+  { label: '1-2万/月', value: '1-2万/月' },
+  { label: '2-3万/月', value: '2-3万/月' },
+  { label: '3-5万/月', value: '3-5万/月' },
+  { label: '5-8万/月', value: '5-8万/月' },
+  { label: '8万/月以上', value: '8万/月以上' },
+];
+
 const BIRTH_YEARS = Array.from({ length: 2026 - 1940 + 1 }, (_, index) => String(2026 - index));
 
 const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
@@ -229,17 +248,18 @@ function getInitialToken() {
   return window.localStorage.getItem('gex-token');
 }
 
-function badgeClass(type: 'default' | 'red' | 'green' | 'gold' = 'default') {
+function badgeClass(type: 'default' | 'red' | 'green' | 'gold' | 'yellow' = 'default') {
   const styles = {
     default: 'bg-[#EEE9E0] text-[#5A5248] border border-[#D8D0C4]',
     red: 'bg-[#FEF0F0] text-[#B5272A] border border-[#F5C4C5]',
     green: 'bg-[#EBF5EE] text-[#2C8A4A] border border-[#B8DAC4]',
     gold: 'bg-[#FDF6E3] text-[#9A6F1A] border border-[#E8D49A]',
+    yellow: 'bg-[#FFF2C7] text-[#8A6500] border border-[#F0D27A]',
   };
   return styles[type];
 }
 
-function Badge({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'red' | 'green' | 'gold' }) {
+function Badge({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'red' | 'green' | 'gold' | 'yellow' }) {
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] ${badgeClass(tone)}`}>{children}</span>;
 }
 
@@ -268,6 +288,48 @@ function toTraits(text: string) {
 
 function formatAge(profile: ProfileRecord) {
   return `${profile.age}岁 · ${profile.height}cm`;
+}
+
+function sortProfiles(profiles: ProfileRecord[], sort: SortMode) {
+  const cloned = [...profiles];
+
+  if (sort === 'age-asc') {
+    return cloned.sort((left, right) => left.age - right.age);
+  }
+
+  if (sort === 'age-desc') {
+    return cloned.sort((left, right) => right.age - left.age);
+  }
+
+  if (sort === 'height') {
+    return cloned.sort((left, right) => right.height - left.height);
+  }
+
+  return cloned.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+}
+
+function formatLastSeen(lastSeenAt?: string | null) {
+  if (!lastSeenAt) {
+    return '';
+  }
+
+  const deltaMs = Date.now() - new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+    return 'just now';
+  }
+
+  const minutes = Math.max(1, Math.floor(deltaMs / 60000));
+  if (minutes < 60) {
+    return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
 function ProfilePill({ profile }: { profile: ProfileRecord }) {
@@ -309,7 +371,13 @@ export default function MarketMvpApp() {
   const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[] } | null>(null);
   const [messageText, setMessageText] = useState('');
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
-  const [filters, setFilters] = useState({ search: '', gender: 'all' as GenderFilter, sort: 'latest' as SortMode });
+  const [filters, setFilters] = useState({
+    search: '',
+    gender: 'all' as GenderFilter,
+    ageRange: 'all',
+    salaryRange: 'all',
+    sort: 'latest' as SortMode,
+  });
   const [profileForm, setProfileForm] = useState<ProfileFormState>(defaultProfileForm);
 
   const copy = COPY[locale];
@@ -632,15 +700,107 @@ export default function MarketMvpApp() {
   const outgoingCount = connections?.outgoing.length ?? 0;
 
   const filteredProfiles = useMemo(() => {
-    const search = filters.search.trim().toLowerCase();
-    return profiles.filter((profile) => {
+    const searchTokens = filters.search
+      .trim()
+      .toLowerCase()
+      .split(/[\s,，]+/)
+      .filter(Boolean);
+
+    function parseSalaryValue(text: string) {
+      const normalized = text.trim().replace(/[–—~]/g, '-').replace(/\s+/g, '');
+      if (!normalized) {
+        return null;
+      }
+
+      const extractValue = (part: string) => {
+        const match = part.match(/(\d+(?:\.\d+)?)(千|k|万)?/i);
+        if (!match) {
+          return null;
+        }
+
+        const number = Number(match[1]);
+        if (!Number.isFinite(number)) {
+          return null;
+        }
+
+        const unit = match[2]?.toLowerCase();
+        if (unit === '千' || unit === 'k') {
+          return number / 10;
+        }
+
+        return number;
+      };
+
+      if (normalized.includes('以上') || normalized.includes('>=') || normalized.includes('≥')) {
+        const min = extractValue(normalized);
+        return min === null ? null : { min, max: Number.POSITIVE_INFINITY };
+      }
+
+      if (normalized.includes('-')) {
+        const [left, right] = normalized.split('-');
+        const min = extractValue(left);
+        const max = extractValue(right);
+        if (min === null || max === null) {
+          return null;
+        }
+        return { min: Math.min(min, max), max: Math.max(min, max) };
+      }
+
+      const exact = extractValue(normalized);
+      return exact === null ? null : { min: exact, max: exact };
+    }
+
+    function parseAgeRange(value: string) {
+      if (!value || value === 'all') {
+        return null;
+      }
+
+      if (value.endsWith('+')) {
+        const min = Number(value.slice(0, -1));
+        return Number.isFinite(min) ? { min, max: Number.POSITIVE_INFINITY } : null;
+      }
+
+      const [start, end] = value.split('-').map(Number);
+      return Number.isFinite(start) && Number.isFinite(end) ? { min: Math.min(start, end), max: Math.max(start, end) } : null;
+    }
+
+    const filtered = profiles.filter((profile) => {
       const matchesGender = filters.gender === 'all' || profile.gender === filters.gender;
-      const matchesSearch = !search || [profile.city, profile.hukou, profile.education, profile.school, profile.industry, profile.jobTitle, profile.about, profile.preferences]
+      const corpus = [
+        profile.childAlias,
+        profile.city,
+        profile.hukou,
+        profile.hometown,
+        profile.education,
+        profile.school,
+        profile.major,
+        profile.industry,
+        profile.jobTitle,
+        profile.income,
+        profile.property,
+        profile.car,
+        profile.hobbies,
+        profile.about,
+        profile.preferences,
+        profile.traits.join(' '),
+      ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(search));
-      return matchesGender && matchesSearch;
+        .join(' ')
+        .toLowerCase();
+
+      const matchesSearch = searchTokens.length === 0 || searchTokens.every((token) => corpus.includes(token));
+
+      const ageRange = parseAgeRange(filters.ageRange);
+      const salaryRange = filters.salaryRange === 'all' ? null : parseSalaryValue(filters.salaryRange);
+      const profileSalary = parseSalaryValue(profile.income);
+
+      const matchesAge = !ageRange || (profile.age >= ageRange.min && profile.age <= ageRange.max);
+      const matchesSalary = !salaryRange || (profileSalary ? profileSalary.max >= salaryRange.min && profileSalary.min <= salaryRange.max : false);
+
+      return matchesGender && matchesSearch && matchesAge && matchesSalary;
     });
-  }, [filters.gender, filters.search, profiles]);
+    return sortProfiles(filtered, filters.sort);
+  }, [filters.ageRange, filters.gender, filters.salaryRange, filters.search, filters.sort, profiles]);
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center bg-[#F7F4EF] text-[#5A5248]">Loading...</div>;
@@ -648,7 +808,13 @@ export default function MarketMvpApp() {
 
   if (screen === 'auth') {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
+      <div className="relative min-h-screen bg-[#F7F4EF] text-[#1A1208]">
+        <button
+          onClick={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
+          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] shadow-sm"
+        >
+          <Globe2 size={14} /> {copy.language}
+        </button>
         <div className="mx-auto grid min-h-screen max-w-6xl gap-0 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="relative overflow-hidden border-r border-[#D8D0C4] bg-white px-8 py-10 lg:px-12">
             <div className="mb-10 flex items-center justify-between">
@@ -659,12 +825,6 @@ export default function MarketMvpApp() {
                   <div className="text-[10px] font-mono text-[#7A6E62]">{copy.subtitle}</div>
                 </div>
               </div>
-              <button
-                onClick={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
-                className="inline-flex items-center gap-2 rounded-full border border-[#D8D0C4] bg-[#FAFAF8] px-3 py-2 text-xs text-[#5A5248]"
-              >
-                <Globe2 size={14} /> {copy.language}
-              </button>
             </div>
 
             <div className="max-w-xl">
@@ -992,7 +1152,7 @@ export default function MarketMvpApp() {
                 <button
                   onClick={() => { if (!detailRequested && !detailConnected) { void requestConnect(selectedProfile.id); } }}
                   disabled={detailRequested || detailConnected}
-                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition-colors ${detailRequested || detailConnected ? 'bg-[#2C8A4A]' : 'bg-[#A87C1A]'}`}
+                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailRequested ? 'bg-[#FFF2C7] text-[#8A6500]' : detailConnected ? 'bg-[#2C8A4A] text-white' : 'bg-[#A87C1A] text-white'}`}
                 >
                   {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <UserCheck size={16} /> : <Heart size={16} />}
                   {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '已发送' : 'Requested') : copy.requestConnect}
@@ -1090,6 +1250,16 @@ export default function MarketMvpApp() {
                 <div className="rounded-2xl border border-[#D8D0C4] bg-[#FAFAF8] p-4">
                   <div className="text-xs font-mono text-[#7A6E62]">{otherProfile.childAlias}</div>
                   <div className="mt-1 text-xl font-semibold">{otherProfile.gender} · {formatAge(otherProfile)}</div>
+                  <div className="mt-2 flex items-center gap-2 text-[11px] font-mono text-[#7A6E62]">
+                    <span className={`h-2.5 w-2.5 rounded-full ${otherProfile.presence?.status === 'online' ? 'bg-[#2C8A4A]' : 'bg-[#B91C1C]'}`} />
+                    <span>
+                      {otherProfile.presence?.status === 'online'
+                        ? (locale === 'zh' ? '在线' : 'Online now')
+                        : otherProfile.presence?.lastSeenAt
+                          ? (locale === 'zh' ? `最后在线 ${formatLastSeen(otherProfile.presence.lastSeenAt)}` : `Last seen ${formatLastSeen(otherProfile.presence.lastSeenAt)}`)
+                          : (locale === 'zh' ? '离线' : 'Offline')}
+                    </span>
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <ProfilePill profile={otherProfile} />
                     <Badge>{otherProfile.education}</Badge>
@@ -1158,7 +1328,7 @@ export default function MarketMvpApp() {
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
       <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_180px_180px_160px]">
+        <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_180px_180px_180px_160px_160px]">
           <label className="block lg:col-span-1">
             <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '搜索' : 'Search'}</div>
             <div className="relative">
@@ -1180,6 +1350,30 @@ export default function MarketMvpApp() {
             </select>
           </label>
           <label className="block">
+            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '年龄范围' : 'Age range'}</div>
+            <select
+              value={filters.ageRange}
+              onChange={(event) => setFilters((current) => ({ ...current, ageRange: event.target.value }))}
+              className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {AGE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '薪资范围' : 'Salary range'}</div>
+            <select
+              value={filters.salaryRange}
+              onChange={(event) => setFilters((current) => ({ ...current, salaryRange: event.target.value }))}
+              className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {SALARY_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
             <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '排序' : 'Sort'}</div>
             <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]">
               <option value="latest">Latest</option>
@@ -1190,7 +1384,7 @@ export default function MarketMvpApp() {
           </label>
           <div className="flex items-end gap-2">
             <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#A87C1A] px-4 py-3 text-sm font-medium text-white">
-              <Search size={16} /> {locale === 'zh' ? '刷新' : 'Refresh'}
+              <Search size={16} /> {locale === 'zh' ? '搜索' : 'Search'}
             </button>
           </div>
         </div>
@@ -1238,7 +1432,7 @@ export default function MarketMvpApp() {
                     <button
                       onClick={() => { if (!isPending && !isConnected) { void requestConnect(profile.id); } }}
                       disabled={isPending || isConnected}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors ${isPending || isConnected ? 'bg-[#2C8A4A]' : 'bg-[#A87C1A]'}`}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isPending ? 'bg-[#FFF2C7] text-[#8A6500]' : isConnected ? 'bg-[#2C8A4A] text-white' : 'bg-[#A87C1A] text-white'}`}
                     >
                       {isConnected ? <CheckCircle2 size={16} /> : isPending ? <UserCheck size={16} /> : <UserPlus size={16} />}
                       {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '已发送' : 'Requested') : ''}
@@ -1330,7 +1524,7 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
           <div className="text-sm font-semibold">{profile.gender} · {profile.age}岁 · {profile.height}cm</div>
           <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">{profile.city} · {profile.education} · {profile.industry}</div>
         </div>
-        <Badge tone={connection.status === 'approved' ? 'green' : connection.status === 'rejected' ? 'default' : 'gold'}>{connection.status === 'approved' ? (locale === 'zh' ? '已通过' : 'Approved') : connection.status === 'rejected' ? (locale === 'zh' ? '已拒绝' : 'Rejected') : (locale === 'zh' ? '待处理' : 'Pending')}</Badge>
+        <Badge tone={connection.status === 'approved' ? 'green' : connection.status === 'rejected' ? 'default' : 'yellow'}>{connection.status === 'approved' ? (locale === 'zh' ? '已通过' : 'Approved') : connection.status === 'rejected' ? (locale === 'zh' ? '已拒绝' : 'Rejected') : (locale === 'zh' ? '待处理' : 'Pending')}</Badge>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">{profile.traits.slice(0, 3).map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
       <div className="mt-4 flex gap-2">

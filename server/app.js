@@ -6,7 +6,7 @@ import { approveConnection, cancelConnection, listConnections, rejectConnection,
 import { listMessages, sendMessage } from './services/chat.js';
 import { login, register, resolveSession, updateLanguage } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
-import { loadState } from './store.js';
+import { loadState, touchUserActivity } from './store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,6 +120,10 @@ async function handleApi(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
   const session = await getCurrentSession(request);
   const currentUser = session?.user ?? null;
+
+  if (currentUser) {
+    touchUserActivity(currentUser.id);
+  }
 
   try {
     if (request.method === 'OPTIONS') {
