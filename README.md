@@ -7,5 +7,9 @@
 
   Run `npm i` to install the dependencies.
 
-  Run `npm run dev` to start the development server.
+  Run `npm run api` in one terminal to start the local backend on port 3001.
+
+  Run `npm run dev` in a second terminal to start the Vite frontend.
+
+  The site is Chinese-first, and the UI includes an English translation toggle.
   
