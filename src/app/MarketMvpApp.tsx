@@ -1032,7 +1032,7 @@ export default function MarketMvpApp() {
       <div className="relative min-h-screen bg-[#F7F4EF] text-[#1A1208]">
         <button
           onClick={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
-          className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] shadow-sm"
+          className="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] shadow-sm"
         >
           <Globe2 size={14} /> {copy.language}
         </button>
