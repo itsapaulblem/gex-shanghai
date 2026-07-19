@@ -25,7 +25,7 @@ import { api, type ConnectionRecord, type Locale, type MessageRecord, type Profi
 type Screen = 'auth' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
 type AuthMode = 'login' | 'register';
 type GenderFilter = 'all' | '男' | '女';
-type SortMode = 'latest' | 'age-asc' | 'age-desc' | 'height';
+type SortMode = 'latest' | 'age-asc' | 'age-desc' | 'height-asc' | 'height-desc';
 
 type ProfileFormState = {
   honorific: string;
@@ -228,6 +228,129 @@ const SALARY_RANGE_OPTIONS = [
   { label: '20万/月以上', value: '20万/月以上' },
 ];
 
+const HEIGHT_RANGE_OPTIONS = [
+  { label: 'Any height', value: 'all' },
+  { label: '160+', value: '160+' },
+  { label: '165+', value: '165+' },
+  { label: '170+', value: '170+' },
+  { label: '175+', value: '175+' },
+  { label: '180+', value: '180+' },
+];
+
+const EDUCATION_LEVEL_OPTIONS = [
+  { label: 'Any education', value: 'all' },
+  { label: '大专', value: '大专' },
+  { label: '本科', value: '本科' },
+  { label: '硕士', value: '硕士' },
+  { label: '博士', value: '博士' },
+];
+
+const EDUCATION_RANK: Record<string, number> = {
+  大专: 1,
+  专科: 1,
+  本科: 2,
+  学士: 2,
+  硕士: 3,
+  研究生: 3,
+  博士: 4,
+  博士后: 5,
+};
+
+const SEARCH_ALIASES: Record<string, string[]> = {
+  上海: ['shanghai'],
+  北京: ['beijing'],
+  杭州: ['hangzhou'],
+  深圳: ['shenzhen'],
+  江苏: ['jiangsu'],
+  浙江: ['zhejiang'],
+  互联网: ['internet', 'tech', 'technology'],
+  金融: ['finance', 'financial'],
+  教育: ['education'],
+  建筑: ['construction'],
+  医疗: ['medical', 'healthcare'],
+  硕士: ['master', 'masters', 'graduate'],
+  本科: ['bachelor', 'bachelors', 'undergraduate'],
+  博士: ['phd', 'doctorate'],
+  大专: ['college', 'associate'],
+  有房: ['own house', 'house'],
+  无房: ['no house'],
+  有车: ['own car', 'car'],
+  无车: ['no car'],
+};
+
+function normalizeSearchCorpus(profile: ProfileRecord) {
+  const baseValues = [
+    profile.childAlias,
+    profile.city,
+    profile.hukou,
+    profile.hometown,
+    profile.education,
+    profile.school,
+    profile.major,
+    profile.industry,
+    profile.jobTitle,
+    profile.income,
+    profile.property,
+    profile.car,
+    profile.hobbies,
+    profile.about,
+    profile.preferences,
+    profile.traits.join(' '),
+    String(profile.age),
+    String(profile.height),
+    'city',
+    'hukou',
+    'school',
+    'industry',
+    'education',
+    'income',
+    'height',
+  ].filter(Boolean);
+
+  const aliases = baseValues.flatMap((value) => SEARCH_ALIASES[value] ?? []);
+  return [...baseValues, ...aliases].join(' ').toLowerCase();
+}
+
+function getEducationRank(value?: string | null) {
+  if (!value) {
+    return 0;
+  }
+
+  const normalized = value.trim();
+  if (normalized in EDUCATION_RANK) {
+    return EDUCATION_RANK[normalized];
+  }
+
+  const matched = Object.entries(EDUCATION_RANK).find(([key]) => normalized.includes(key));
+  return matched ? matched[1] : 0;
+}
+
+function parseHeightFloor(value: string) {
+  if (!value || value === 'all') {
+    return null;
+  }
+
+  const match = value.match(/(\d+)/);
+  const minimum = match ? Number(match[1]) : Number.NaN;
+  return Number.isFinite(minimum) ? minimum : null;
+}
+
+function buildPaginationItems(totalPages: number, currentPage: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, '…', totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, '…', totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, '…', currentPage - 1, currentPage, currentPage + 1, '…', totalPages];
+}
+
 const BIRTH_YEARS = Array.from({ length: 2026 - 1940 + 1 }, (_, index) => String(2026 - index));
 
 const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
@@ -289,7 +412,7 @@ const PROFILE_FIELD_LABELS: Record<keyof ProfileFormState, { zh: string; en: str
   income: { zh: '月收入', en: 'Monthly income' },
   property: { zh: '房产', en: 'Property' },
   car: { zh: '车辆', en: 'Car' },
-  traits: { zh: '孩子性格描述', en: 'Personality (written by parent)' },
+  traits: { zh: '性格描述', en: 'Personality' },
   hobbies: { zh: '兴趣爱好', en: 'Hobbies & Interests' },
   preferredAgeRange: { zh: '期望年龄范围', en: 'Preferred Age Range' },
   preferredHeightRange: { zh: '期望身高范围', en: 'Preferred Height (cm)' },
@@ -331,6 +454,17 @@ function Badge({ children, tone = 'default' }: { children: React.ReactNode; tone
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] ${badgeClass(tone)}`}>{children}</span>;
 }
 
+function Tag({ children, color = 'default' }: { children: React.ReactNode; color?: 'default' | 'red' | 'green' | 'gold' }) {
+  const colors = {
+    default: 'bg-[#EEE9E0] text-[#5A5248] border border-[#D8D0C4]',
+    red: 'bg-[#FEF0F0] text-[#B5272A] border border-[#F5C4C5]',
+    green: 'bg-[#EBF5EE] text-[#2C8A4A] border border-[#B8DAC4]',
+    gold: 'bg-[#FDF6E3] text-[#9A6F1A] border border-[#E8D49A]',
+  };
+
+  return <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] ${colors[color]}`}>{children}</span>;
+}
+
 function SectionLabel({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-3 flex items-end justify-between gap-4">
@@ -369,7 +503,11 @@ function sortProfiles(profiles: ProfileRecord[], sort: SortMode) {
     return cloned.sort((left, right) => right.age - left.age);
   }
 
-  if (sort === 'height') {
+  if (sort === 'height-asc') {
+    return cloned.sort((left, right) => left.height - right.height);
+  }
+
+  if (sort === 'height-desc') {
     return cloned.sort((left, right) => right.height - left.height);
   }
 
@@ -445,6 +583,8 @@ export default function MarketMvpApp() {
     search: '',
     gender: 'all' as GenderFilter,
     ageRange: 'all',
+    heightRange: 'all',
+    minEducation: 'all',
     salaryRange: 'all',
     sort: 'latest' as SortMode,
   });
@@ -469,6 +609,7 @@ export default function MarketMvpApp() {
       CANCEL_NOT_ALLOWED: 'Error! Only pending requests can be cancelled!',
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
+      PROFILE_REQUIRED: 'Error! Missing Fields!',
       UNAUTHORIZED: 'Error! Please sign in again!',
       REQUEST_FAILED: 'Error! Request failed!',
     };
@@ -585,6 +726,10 @@ export default function MarketMvpApp() {
       refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)));
     }
   }, [filters.sort]);
+
+  useEffect(() => {
+    setBrowsePage(1);
+  }, [filters.search, filters.gender, filters.ageRange, filters.heightRange, filters.minEducation, filters.salaryRange, filters.sort]);
 
   async function submitAuth() {
     try {
@@ -850,43 +995,28 @@ export default function MarketMvpApp() {
       return Number.isFinite(start) && Number.isFinite(end) ? { min: Math.min(start, end), max: Math.max(start, end) } : null;
     }
 
+    const minimumHeight = parseHeightFloor(filters.heightRange);
+    const minimumEducation = getEducationRank(filters.minEducation);
+
     const filtered = profiles.filter((profile) => {
       const matchesGender = filters.gender === 'all' || profile.gender === filters.gender;
-      const corpus = [
-        profile.childAlias,
-        profile.city,
-        profile.hukou,
-        profile.hometown,
-        profile.education,
-        profile.school,
-        profile.major,
-        profile.industry,
-        profile.jobTitle,
-        profile.income,
-        profile.property,
-        profile.car,
-        profile.hobbies,
-        profile.about,
-        profile.preferences,
-        profile.traits.join(' '),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+      const corpus = normalizeSearchCorpus(profile);
 
       const matchesSearch = searchTokens.length === 0 || searchTokens.every((token) => corpus.includes(token));
 
       const ageRange = parseAgeRange(filters.ageRange);
       const salaryRange = filters.salaryRange === 'all' ? null : parseSalaryValue(filters.salaryRange);
       const profileSalary = parseSalaryValue(profile.income);
+      const matchesHeight = minimumHeight === null || profile.height >= minimumHeight;
+      const matchesEducation = minimumEducation === 0 || getEducationRank(profile.education) >= minimumEducation;
 
       const matchesAge = !ageRange || (profile.age >= ageRange.min && profile.age <= ageRange.max);
       const matchesSalary = !salaryRange || (profileSalary ? profileSalary.max >= salaryRange.min && profileSalary.min <= salaryRange.max : false);
 
-      return matchesGender && matchesSearch && matchesAge && matchesSalary;
+      return matchesGender && matchesSearch && matchesAge && matchesHeight && matchesEducation && matchesSalary;
     });
     return sortProfiles(filtered, filters.sort);
-  }, [filters.ageRange, filters.gender, filters.salaryRange, filters.search, filters.sort, profiles]);
+  }, [filters.ageRange, filters.gender, filters.heightRange, filters.minEducation, filters.salaryRange, filters.search, filters.sort, profiles]);
 
   const browsableProfiles = filteredProfiles.filter((profile) => !ownProfile || profile.id !== ownProfile.id);
   const browsePageCount = Math.max(1, Math.ceil(browsableProfiles.length / 6));
@@ -910,7 +1040,7 @@ export default function MarketMvpApp() {
           <div className="relative overflow-hidden border-r border-[#D8D0C4] bg-white px-8 py-10 lg:px-12">
             <div className="mb-10 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
                 <div>
                   <div className="font-serif text-lg font-semibold">{copy.appName}</div>
                   <div className="text-[10px] font-mono text-[#7A6E62]">{copy.subtitle}</div>
@@ -919,7 +1049,7 @@ export default function MarketMvpApp() {
             </div>
 
             <div className="max-w-xl">
-              <div className="mb-4 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-[#A87C1A]">
+              <div className="mb-4 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-[#B5272A]">
                 <Sparkles size={14} /> {locale === 'zh' ? '责任撮合 · 以家为本' : 'Responsible matchmaking · family first'}
               </div>
               <h1 className="font-serif text-5xl font-semibold leading-tight">{copy.authTitle}</h1>
@@ -946,7 +1076,7 @@ export default function MarketMvpApp() {
                   const Icon = item.icon;
                   return (
                     <Card key={item.title} className="border-[#E8D49A] bg-[#FFF9E8] p-4">
-                      <Icon className="mb-3 text-[#A87C1A]" size={18} />
+                      <Icon className="mb-3 text-[#B5272A]" size={18} />
                       <div className="text-base font-semibold">{item.title}</div>
                       <div className="mt-1 text-sm leading-7 text-[#5A5248]">{item.body}</div>
                     </Card>
@@ -967,13 +1097,13 @@ export default function MarketMvpApp() {
               <div className="mb-4 grid grid-cols-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] p-1">
                 <button
                   onClick={() => setAuthMode('register')}
-                  className={`rounded-full px-3 py-2 text-base ${authMode === 'register' ? 'bg-[#A87C1A] text-white' : 'text-[#5A5248]'}`}
+                  className={`rounded-full px-3 py-2 text-base ${authMode === 'register' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.createAccount}
                 </button>
                 <button
                   onClick={() => setAuthMode('login')}
-                  className={`rounded-full px-3 py-2 text-base ${authMode === 'login' ? 'bg-[#A87C1A] text-white' : 'text-[#5A5248]'}`}
+                  className={`rounded-full px-3 py-2 text-base ${authMode === 'login' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.login}
                 </button>
@@ -1013,7 +1143,7 @@ export default function MarketMvpApp() {
                 <button
                   onClick={submitAuth}
                   disabled={authBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#2C8A4A] px-4 py-3 text-base font-medium text-white hover:bg-[#247A40] disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B5272A] px-4 py-3 text-base font-medium text-white hover:bg-[#9E2224] disabled:opacity-60"
                 >
                   <LogIn size={16} /> {copy.signIn}
                 </button>
@@ -1136,7 +1266,7 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, [fieldKey]: event.target.value }))}
               className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
               placeholder={fieldKey === 'about'
-                ? (locale === 'zh' ? '填写孩子的整体介绍' : 'Share a short introduction')
+                ? (locale === 'zh' ? '填写整体介绍' : 'Share a short introduction')
                 : (locale === 'zh' ? '填写对另一半的期待' : 'State partner preferences')}
             />
           ) : fieldKey === 'traits' ? (
@@ -1261,6 +1391,11 @@ export default function MarketMvpApp() {
     const detailPendingConnection = getPendingOutgoingConnection(selectedProfile.id, connections);
     const detailRequested = detailConnectionState === 'pending';
     const detailConnected = detailConnectionState === 'connected';
+    const preferenceParts = selectedProfile.preferences
+      .split(/[·;；|]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const preferenceValue = (index: number) => preferenceParts[index] ?? (selectedProfile.preferences || '—');
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
@@ -1270,58 +1405,140 @@ export default function MarketMvpApp() {
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] font-mono text-[#7A6E62]">{selectedProfile.childAlias}</div>
-                  <div className="mt-1 text-2xl font-semibold">{selectedProfile.gender}，{formatAge(selectedProfile)}</div>
+            <div className="space-y-4">
+              <Card className="p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-mono text-[#7A6E62]">{selectedProfile.childAlias}</div>
+                    <div className="mt-1 text-2xl font-semibold">{selectedProfile.gender}，{formatAge(selectedProfile)}</div>
+                  </div>
+                  <ProfilePill profile={selectedProfile} />
                 </div>
-                <ProfilePill profile={selectedProfile} />
-              </div>
-              <div className="mb-5 flex flex-wrap gap-2">
-                {selectedProfile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}
-              </div>
-              <div className="space-y-3 text-sm text-[#5A5248]">
-                <div><strong>{locale === 'zh' ? '城市' : 'City'}：</strong>{selectedProfile.city} / {selectedProfile.hukou}</div>
-                <div><strong>{locale === 'zh' ? '学历' : 'Education'}：</strong>{selectedProfile.education} · {selectedProfile.school}</div>
-                <div><strong>{locale === 'zh' ? '行业' : 'Industry'}：</strong>{selectedProfile.industry} · {selectedProfile.jobTitle}</div>
-                <div><strong>{locale === 'zh' ? '收入' : 'Income'}：</strong>{selectedProfile.income}</div>
-                <div><strong>{locale === 'zh' ? '房车' : 'Property & vehicle'}：</strong>{selectedProfile.property} · {selectedProfile.car}</div>
-              </div>
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={() => {
-                    if (detailConnected) {
-                      return;
-                    }
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {selectedProfile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}
+                </div>
 
-                    if (detailPendingConnection) {
-                      void cancelRequest(detailPendingConnection.id);
-                      return;
-                    }
+                <div className="mb-5 space-y-2">
+                  <button
+                    onClick={() => {
+                      if (detailConnected) {
+                        return;
+                      }
 
-                    void requestConnect(selectedProfile.id);
-                  }}
-                  disabled={detailConnected}
-                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailConnected ? 'bg-[#2C8A4A] text-white' : detailRequested ? 'bg-[#FFF5F5] text-[#B91C1C] border border-[#F5C4C5]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
-                >
-                  {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
-                  {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
-                </button>
-                <button onClick={() => setScreen('connections')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
-                  <Users size={16} /> {copy.myConnections}
-                </button>
-              </div>
-            </Card>
+                      if (detailPendingConnection) {
+                        void cancelRequest(detailPendingConnection.id);
+                        return;
+                      }
+
+                      void requestConnect(selectedProfile.id);
+                    }}
+                    disabled={detailConnected}
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailConnected ? 'bg-[#2C8A4A] text-white' : detailRequested ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
+                  >
+                    {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
+                    {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
+                  </button>
+                  <button onClick={() => setScreen('connections')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF]">
+                    <Users size={16} /> {copy.myConnections}
+                  </button>
+                </div>
+
+                <div className="rounded-2xl border border-[#D8D0C4] bg-white overflow-hidden">
+                  {[
+                    { label: locale === 'zh' ? '城市' : 'City', value: `${selectedProfile.city} · 户籍${selectedProfile.hukou}` },
+                    { label: locale === 'zh' ? '学历' : 'Education', value: `${selectedProfile.education} · ${selectedProfile.school}` },
+                    { label: locale === 'zh' ? '行业' : 'Industry', value: selectedProfile.industry },
+                    { label: locale === 'zh' ? '月收入' : 'Monthly income', value: selectedProfile.income },
+                    { label: locale === 'zh' ? '房产' : 'Property', value: selectedProfile.property },
+                    { label: locale === 'zh' ? '车辆' : 'Vehicle', value: selectedProfile.car },
+                  ].map((item, index) => (
+                    <div key={item.label} className={`flex items-center gap-3 px-4 py-2.5 ${index < 5 ? 'border-b border-[#EEE9E0]' : ''}`}>
+                      <span className="text-[10px] font-mono text-[#7A6E62] w-12 flex-shrink-0">{item.label}</span>
+                      <span className="text-xs text-[#1A1208]">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
 
             <div className="space-y-4">
               <Card className="p-5">
-                <SectionLabel title={locale === 'zh' ? '父母寄语' : 'Parent note'} />
-                <p className="text-sm leading-8 text-[#3A3028]">{selectedProfile.about}</p>
+                <div className="text-[10px] font-mono text-[#B5272A] mb-1">档案编号 #2024-SH-001847</div>
+                <h2 className="font-serif text-[#1A1208] text-2xl font-semibold mb-1">{selectedProfile.gender}，{selectedProfile.age}岁，{selectedProfile.height}cm</h2>
+                <div className="flex flex-wrap gap-2">
+                  <Tag color="red">沪籍</Tag>
+                  <Tag color="green">{selectedProfile.property}</Tag>
+                  <Tag color="green">{selectedProfile.car}</Tag>
+                  {selectedProfile.traits.map((trait) => <Tag key={trait}>{trait}</Tag>)}
+                </div>
               </Card>
+
               <Card className="p-5">
-                <SectionLabel title={locale === 'zh' ? '择偶要求' : 'Preferences'} />
-                <p className="text-sm leading-8 text-[#3A3028]">{selectedProfile.preferences}</p>
+                <SectionLabel title={locale === 'zh' ? '父母寄语' : "Parent's Note"} />
+                <p className="text-sm leading-8 text-[#3A3028] font-serif">{selectedProfile.about || '—'}</p>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '基本资料 · Basic Info' : 'Basic Info'}</span>
+                </div>
+                <div className="divide-y divide-[#F0EBE1]">
+                  {[
+                    [locale === 'zh' ? '出生年份' : 'Birth Year', `${selectedProfile.birthYear}年（${selectedProfile.age}岁）`],
+                    [locale === 'zh' ? '性别' : 'Gender', selectedProfile.gender],
+                    [locale === 'zh' ? '身高' : 'Height', `${selectedProfile.height} cm`],
+                    [locale === 'zh' ? '体重' : 'Weight', selectedProfile.weight ? `${selectedProfile.weight} kg` : '—'],
+                    [locale === 'zh' ? '现居城市' : 'Current city', selectedProfile.city],
+                    [locale === 'zh' ? '户籍' : 'Hukou', selectedProfile.hukou],
+                    [locale === 'zh' ? '老家' : 'Hometown', selectedProfile.hometown],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex px-5 py-2.5">
+                      <span className="text-[11px] font-mono text-[#7A6E62] w-28 flex-shrink-0">{label}</span>
+                      <span className="text-xs text-[#1A1208]">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '学历与职业 · Education & Career' : 'Education & Career'}</span>
+                </div>
+                <div className="divide-y divide-[#F0EBE1]">
+                  {[
+                    [locale === 'zh' ? '最高学历' : 'Highest education', selectedProfile.education],
+                    [locale === 'zh' ? '大学 / 学校' : 'University / School', selectedProfile.school],
+                    [locale === 'zh' ? '所学专业' : 'Major / Field of Study', selectedProfile.major],
+                    [locale === 'zh' ? '职业行业' : 'Industry', selectedProfile.industry],
+                    [locale === 'zh' ? '职位' : 'Job title', selectedProfile.jobTitle],
+                    [locale === 'zh' ? '月收入' : 'Monthly income', selectedProfile.income],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex px-5 py-2.5">
+                      <span className="text-[11px] font-mono text-[#7A6E62] w-28 flex-shrink-0">{label}</span>
+                      <span className="text-xs text-[#1A1208]">{value || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '择偶要求 · Partner Preferences' : 'Partner Preferences'}</span>
+                </div>
+                <div className="divide-y divide-[#F0EBE1]">
+                  {[
+                    [locale === 'zh' ? '期望年龄范围' : 'Preferred age range', preferenceValue(0)],
+                    [locale === 'zh' ? '期望身高范围' : 'Preferred height (cm)', preferenceValue(1)],
+                    [locale === 'zh' ? '最低学历要求' : 'Min. education level', preferenceValue(2)],
+                    [locale === 'zh' ? '户籍偏好' : 'Hukou preference', preferenceValue(3)],
+                    [locale === 'zh' ? '其他要求' : 'Additional preferences', preferenceValue(4)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex px-5 py-2.5">
+                      <span className="text-[11px] font-mono text-[#7A6E62] w-28 flex-shrink-0">{label}</span>
+                      <span className="text-xs text-[#1A1208]">{value}</span>
+                    </div>
+                  ))}
+                </div>
               </Card>
             </div>
           </div>
@@ -1399,47 +1616,30 @@ export default function MarketMvpApp() {
             {otherProfile ? (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-[#D8D0C4] bg-[#FAFAF8] p-4">
-                  <div className="text-xs font-mono text-[#7A6E62]">{otherProfile.childAlias}</div>
-                  <div className="mt-1 text-xl font-semibold">{otherProfile.gender} · {formatAge(otherProfile)}</div>
-                  <div className="mt-2 flex items-center gap-2 text-[11px] font-mono text-[#7A6E62]">
-                    <span className={`h-2.5 w-2.5 rounded-full ${otherProfile.presence?.status === 'online' ? 'bg-[#2C8A4A]' : 'bg-[#B91C1C]'}`} />
-                    <span>
-                      {otherProfile.presence?.status === 'online'
-                        ? (locale === 'zh' ? '在线' : 'Online now')
-                        : otherProfile.presence?.lastSeenAt
-                          ? (locale === 'zh' ? `最后在线 ${formatLastSeen(otherProfile.presence.lastSeenAt)}` : `Last seen ${formatLastSeen(otherProfile.presence.lastSeenAt)}`)
-                          : (locale === 'zh' ? '离线' : 'Offline')}
-                    </span>
+                  <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '对方档案' : 'Profile'}</div>
+                  <div className="mt-1 text-xl font-semibold">{otherProfile.gender}</div>
+                  <div className="mt-2 text-[10px] font-mono text-[#8A8070]">No photo · 隐私保护</div>
+                  <div className="mt-4 divide-y divide-[#EEE9E0] overflow-hidden rounded-2xl border border-[#D8D0C4] bg-white">
+                    {[
+                      [locale === 'zh' ? '年龄' : 'Age', `${otherProfile.age}岁`],
+                      [locale === 'zh' ? '身高' : 'Height', `${otherProfile.height}cm`],
+                      [locale === 'zh' ? '城市' : 'City', otherProfile.city],
+                      [locale === 'zh' ? '户籍' : 'Hukou', otherProfile.hukou],
+                      [locale === 'zh' ? '学历' : 'Education', otherProfile.education],
+                      [locale === 'zh' ? '行业' : 'Industry', otherProfile.industry],
+                      [locale === 'zh' ? '收入' : 'Income', otherProfile.income],
+                      [locale === 'zh' ? '房产' : 'Property', otherProfile.property],
+                      [locale === 'zh' ? '车辆' : 'Vehicle', otherProfile.car],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                        <span className="text-[11px] font-mono text-[#7A6E62]">{label}</span>
+                        <span className="text-xs text-[#1A1208]">{value}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <ProfilePill profile={otherProfile} />
-                    <Badge>{otherProfile.education}</Badge>
-                    <Badge>{otherProfile.industry}</Badge>
-                  </div>
-                </div>
-                <div className="space-y-4 rounded-2xl border border-[#D8D0C4] bg-white p-4">
-                  <div>
-                    <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-[#7A6E62]">{locale === 'zh' ? '完整档案' : 'Full profile'}</div>
-                    <div className="mt-2 text-sm text-[#5A5248]">{otherProfile.city} · {otherProfile.hukou}</div>
-                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.education} · {otherProfile.school}</div>
-                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.industry} · {otherProfile.jobTitle}</div>
-                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.income}</div>
-                    <div className="mt-1 text-sm text-[#5A5248]">{otherProfile.property} · {otherProfile.car}</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {otherProfile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '简介' : 'About'}</div>
-                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.about}</p>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '爱好' : 'Hobbies'}</div>
-                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.hobbies}</p>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '择偶要求' : 'Preferences'}</div>
-                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.preferences}</p>
+                  <div className="mt-4 rounded-2xl border border-[#D8D0C4] bg-white p-4">
+                    <div className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '父母寄语' : 'Parent note'}</div>
+                    <p className="mt-2 text-sm leading-7 text-[#5A5248]">{otherProfile.about || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -1463,7 +1663,7 @@ export default function MarketMvpApp() {
                   placeholder={locale === 'zh' ? '输入消息...' : 'Type a message...'}
                     className="flex-1 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
                 />
-                <button onClick={sendChatMessage} className="inline-flex items-center gap-2 rounded-xl bg-[#A87C1A] px-5 py-3 text-sm font-medium text-white">
+                <button onClick={sendChatMessage} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224]">
                   <Send size={16} /> {locale === 'zh' ? '发送' : 'Send'}
                 </button>
               </div>
@@ -1487,7 +1687,7 @@ export default function MarketMvpApp() {
           </div>
           <div className="grid gap-3 lg:grid-cols-6">
             <label className="block lg:col-span-2">
-              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Search</div>
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Search / 搜索</div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8070]" size={16} />
                 <input
@@ -1514,33 +1714,14 @@ export default function MarketMvpApp() {
             </label>
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Height / 身高</div>
-              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                <option value="">Select...</option>
-                <option>160+</option>
-                <option>165+</option>
-                <option>170+</option>
-                <option>175+</option>
-                <option>180+</option>
+              <select value={filters.heightRange} onChange={(event) => setFilters((current) => ({ ...current, heightRange: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                {HEIGHT_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Min. Education / 最低学历</div>
-              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                <option value="">Select...</option>
-                <option>大专</option>
-                <option>本科</option>
-                <option>硕士</option>
-                <option>博士</option>
-              </select>
-            </label>
-            <label className="block">
-              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">City / 城市</div>
-              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                <option value="">Select...</option>
-                <option>上海</option>
-                <option>北京</option>
-                <option>杭州</option>
-                <option>深圳</option>
+              <select value={filters.minEducation} onChange={(event) => setFilters((current) => ({ ...current, minEducation: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                {EDUCATION_LEVEL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
             <label className="block">
@@ -1554,10 +1735,22 @@ export default function MarketMvpApp() {
               </select>
             </label>
           </div>
-          <div className="mt-3 flex justify-end">
-            <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] transition-colors">
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-[10px] font-mono text-[#7A6E62]">
+                Sort
+                <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="rounded-xl border border-[#D8D0C4] bg-white px-3 py-2 text-xs outline-none focus:border-[#B5272A]">
+                  <option value="latest">Latest</option>
+                  <option value="age-asc">Age asc</option>
+                  <option value="age-desc">Age desc</option>
+                  <option value="height-asc">Height asc</option>
+                  <option value="height-desc">Height desc</option>
+                </select>
+              </label>
+              <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] transition-colors">
               <Search size={16} /> {locale === 'zh' ? '搜索' : 'Search'}
-            </button>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1629,22 +1822,19 @@ export default function MarketMvpApp() {
         </div>
 
         <div className="mt-8 flex items-center justify-center gap-2">
-          {[1, 2, 3].map((pageNumber) => (
-            <button
-              key={pageNumber}
-              onClick={() => setBrowsePage(pageNumber)}
-              className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === pageNumber ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
-            >
-              {pageNumber}
-            </button>
+          {buildPaginationItems(browsePageCount, activeBrowsePage).map((item, index) => (
+            typeof item === 'number' ? (
+              <button
+                key={`${item}-${index}`}
+                onClick={() => setBrowsePage(item)}
+                className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === item ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+              >
+                {item}
+              </button>
+            ) : (
+              <span key={`ellipsis-${index}`} className="px-1 text-[#8A8070]">{item}</span>
+            )
           ))}
-          <span className="px-1 text-[#8A8070]">...</span>
-          <button
-            onClick={() => setBrowsePage(12)}
-            className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === 12 ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
-          >
-            12
-          </button>
         </div>
       </div>
       {notice ? <Toast notice={notice} /> : null}
@@ -1658,7 +1848,7 @@ function AppHeader({ copy, locale, onToggleLocale, onSignOut, onLogoClick, onPro
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
         {onLogoClick ? (
           <button onClick={onLogoClick} className="flex items-center gap-3 text-left">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
             <div>
               <div className="font-semibold">{copy.appName}</div>
               <div className="text-[10px] font-mono text-[#7A6E62]">{currentScreen}</div>
@@ -1666,7 +1856,7 @@ function AppHeader({ copy, locale, onToggleLocale, onSignOut, onLogoClick, onPro
           </button>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#A87C1A] text-white font-serif text-lg font-bold">缘</div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
             <div>
               <div className="font-semibold">{copy.appName}</div>
               <div className="text-[10px] font-mono text-[#7A6E62]">{currentScreen}</div>
@@ -1735,7 +1925,7 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
         {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
         {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
         {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
-        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#A87C1A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
+        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
       </div>
     </div>
   );

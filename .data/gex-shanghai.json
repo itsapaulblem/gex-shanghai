@@ -54,7 +54,7 @@
       "passwordHash": "5bf5d859febc9ad0d4f6912b2304105678d09d3a0fb34bbf5559f216e4db08da",
       "createdAt": "2026-07-18T04:34:59.444Z",
       "language": "en",
-      "lastSeenAt": "2026-07-19T01:26:09.970Z"
+      "lastSeenAt": "2026-07-19T01:35:07.364Z"
     },
     {
       "id": "user_42a0546c",
@@ -71,7 +71,7 @@
       "passwordHash": "9e47974c45768a2bdacef8f3358c6df46f9987bd0701b04f7103e07c01da599b",
       "createdAt": "2026-07-18T05:22:25.024Z",
       "language": "en",
-      "lastSeenAt": "2026-07-18T13:21:04.502Z"
+      "lastSeenAt": "2026-07-19T01:44:18.593Z"
     },
     {
       "id": "user_8d82b945",
@@ -108,6 +108,15 @@
       "createdAt": "2026-07-19T01:02:47.071Z",
       "language": "en",
       "lastSeenAt": "2026-07-19T01:02:47.085Z"
+    },
+    {
+      "id": "user_bf1c8b73",
+      "email": "e1121s941@u.nus.edu",
+      "passwordSalt": "55b828020c9039320469dc560e560aa5",
+      "passwordHash": "8be33ce135526c55dc0571a18109a010acb505fb592ed2569b02c35f68beda5b",
+      "createdAt": "2026-07-19T01:35:38.483Z",
+      "language": "en",
+      "lastSeenAt": "2026-07-19T01:35:58.577Z"
     }
   ],
   "sessions": [
@@ -145,6 +154,11 @@
       "token": "959c8dbf-dc60-433e-b5e9-38ebe8b8aeb4",
       "userId": "user_ae2ce0b2",
       "createdAt": "2026-07-19T01:02:47.071Z"
+    },
+    {
+      "token": "8bb4f533-b8ef-4cfa-8dbb-db79ede2893b",
+      "userId": "user_bf1c8b73",
+      "createdAt": "2026-07-19T01:35:38.483Z"
     }
   ],
   "profiles": [
@@ -552,9 +566,9 @@
       "requesterProfileId": "profile_c8192c4f",
       "targetUserId": "user_440418ff",
       "targetProfileId": "profile_9d0ae5c1",
-      "status": "pending",
+      "status": "approved",
       "createdAt": "2026-07-18T13:31:12.858Z",
-      "updatedAt": "2026-07-18T13:31:12.858Z"
+      "updatedAt": "2026-07-19T01:38:43.587Z"
     },
     {
       "id": "connection_f60cf6e7",
@@ -567,14 +581,14 @@
       "updatedAt": "2026-07-19T00:45:15.499Z"
     },
     {
-      "id": "connection_48f8d9df",
+      "id": "connection_57cde967",
       "requesterUserId": "user_db3e9485",
       "requesterProfileId": "profile_437e70b3",
       "targetUserId": "user_seed_2",
       "targetProfileId": "profile_1",
       "status": "pending",
-      "createdAt": "2026-07-19T01:13:48.957Z",
-      "updatedAt": "2026-07-19T01:13:48.957Z"
+      "createdAt": "2026-07-19T01:35:06.733Z",
+      "updatedAt": "2026-07-19T01:35:06.733Z"
     }
   ],
   "messages": [
