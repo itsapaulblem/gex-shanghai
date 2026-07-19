@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { approveConnection, cancelConnection, listConnections, rejectConnection, requestConnection } from './services/connections.js';
+import { approveConnection, cancelConnection, listConnections, rejectConnection, removeConnection, requestConnection } from './services/connections.js';
 import { listMessages, sendMessage } from './services/chat.js';
 import { login, register, requestPasswordReset, resetPassword, resolveSession, updateLanguage } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
@@ -287,6 +287,18 @@ async function handleApi(request, response) {
 
       const connectionId = url.pathname.split('/')[3];
       const connection = await cancelConnection(connectionId, currentUser.id);
+      sendJson(response, 200, { connection });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname.match(/^\/api\/connections\/[^/]+\/remove$/)) {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const connectionId = url.pathname.split('/')[3];
+      const connection = await removeConnection(connectionId, currentUser.id);
       sendJson(response, 200, { connection });
       return;
     }

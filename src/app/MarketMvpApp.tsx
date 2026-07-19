@@ -100,6 +100,13 @@ type Copy = {
   firstStepDescription: string;
   myProfile: string;
   myConnections: string;
+  removeConnection: string;
+  cancel: string;
+  continue: string;
+  finalConfirmRemove: string;
+  removeWarningTitle: string;
+  removeWarningBody: string;
+  removeWarningFinal: string;
 };
 
 const COPY: Record<Locale, Copy> = {
@@ -145,6 +152,13 @@ const COPY: Record<Locale, Copy> = {
     firstStepDescription: '请填写完整子女资料，系统才会开放浏览、申请和私信功能。',
     myProfile: '我的档案',
     myConnections: '我的连接',
+    removeConnection: '移除连接',
+    cancel: '取消',
+    continue: '继续',
+    finalConfirmRemove: '确认移除',
+    removeWarningTitle: '移除连接确认',
+    removeWarningBody: '警告：你将要移除这条连接。移除后，双方将不再是已连接状态。',
+    removeWarningFinal: '请再次确认：移除后不可直接恢复，需要重新发送连接申请。',
   },
   en: {
     appName: 'Shanghai People’s Park Marriage Market',
@@ -188,6 +202,13 @@ const COPY: Record<Locale, Copy> = {
     firstStepDescription: 'Please complete the child profile to unlock browsing, requests, and chat.',
     myProfile: 'My Profile',
     myConnections: 'My Connections',
+    removeConnection: 'Remove connection',
+    cancel: 'Cancel',
+    continue: 'Continue',
+    finalConfirmRemove: 'Confirm remove',
+    removeWarningTitle: 'Remove connection',
+    removeWarningBody: 'Warning: you are about to remove this connection. Once removed, you are no longer connected.',
+    removeWarningFinal: 'Please confirm again. After removal, you cannot restore it directly and must send a new request.',
   },
 };
 
@@ -695,6 +716,7 @@ export default function MarketMvpApp() {
   const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[] } | null>(null);
   const [messageText, setMessageText] = useState('');
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  const [removeConnectionConfirm, setRemoveConnectionConfirm] = useState<{ connectionId: string; step: 1 | 2 } | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     gender: 'all' as GenderFilter,
@@ -727,6 +749,7 @@ export default function MarketMvpApp() {
       RESET_TOKEN_INVALID: 'Error! Reset link is invalid!',
       RESET_TOKEN_EXPIRED: 'Error! Reset link expired! Request a new one.',
       CANCEL_NOT_ALLOWED: 'Error! Only pending requests can be cancelled!',
+      REMOVE_NOT_ALLOWED: 'Error! Only approved connections can be removed!',
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
       PROFILE_REQUIRED: 'Error! Missing Fields!',
@@ -1040,6 +1063,33 @@ export default function MarketMvpApp() {
     }
   }
 
+  function promptRemoveConnection(connectionId: string) {
+    setRemoveConnectionConfirm({ connectionId, step: 1 });
+  }
+
+  async function executeRemoveConnection() {
+    if (!token || !removeConnectionConfirm) {
+      return;
+    }
+
+    const connectionId = removeConnectionConfirm.connectionId;
+
+    try {
+      await api.removeConnection(token, connectionId);
+      setRemoveConnectionConfirm(null);
+
+      if (chat?.connection.id === connectionId) {
+        setChat(null);
+        setScreen('connections');
+      }
+
+      await refreshConnections(token);
+      showNotice(locale === 'zh' ? 'Success! 已移除连接。' : 'Success! Connection removed.', 'success');
+    } catch (error) {
+      showNotice(formatErrorMessage(error));
+    }
+  }
+
   async function openChat(connectionId: string) {
     if (!token) {
       return;
@@ -1262,6 +1312,23 @@ export default function MarketMvpApp() {
           </div>
         </div>
         {notice ? <Toast notice={notice} /> : null}
+        {removeConnectionConfirm ? (
+          <ConfirmModal
+            title={copy.removeWarningTitle}
+            description={removeConnectionConfirm.step === 1 ? copy.removeWarningBody : copy.removeWarningFinal}
+            cancelLabel={copy.cancel}
+            confirmLabel={removeConnectionConfirm.step === 1 ? copy.continue : copy.finalConfirmRemove}
+            onCancel={() => setRemoveConnectionConfirm(null)}
+            onConfirm={() => {
+              if (removeConnectionConfirm.step === 1) {
+                setRemoveConnectionConfirm((current) => (current ? { ...current, step: 2 } : current));
+                return;
+              }
+
+              void executeRemoveConnection();
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -1617,6 +1684,7 @@ export default function MarketMvpApp() {
           onSignOut={signOut}
           onLogoClick={() => setScreen('browse')}
           onProfileClick={openOwnProfilePage}
+          onConnectionsClick={() => setScreen('connections')}
           currentScreen={copy.profileSetup}
         />
         <div className="mx-auto max-w-5xl px-6 py-8">
@@ -1887,13 +1955,30 @@ export default function MarketMvpApp() {
               </div>
               <div className="space-y-3">
                 {connected.length === 0 ? <EmptyState label={locale === 'zh' ? '通过后会显示在这里' : 'Approved matches appear here'} /> : connected.map((connection) => (
-                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onViewProfile={openProfile} onOpenChat={openChat} />
+                  <ConnectionItem key={connection.id} connection={connection} locale={locale} onViewProfile={openProfile} onOpenChat={openChat} onRemoveConnection={promptRemoveConnection} />
                 ))}
               </div>
             </Card>
           </div>
         </div>
         {notice ? <Toast notice={notice} /> : null}
+        {removeConnectionConfirm ? (
+          <ConfirmModal
+            title={copy.removeWarningTitle}
+            description={removeConnectionConfirm.step === 1 ? copy.removeWarningBody : copy.removeWarningFinal}
+            cancelLabel={copy.cancel}
+            confirmLabel={removeConnectionConfirm.step === 1 ? copy.continue : copy.finalConfirmRemove}
+            onCancel={() => setRemoveConnectionConfirm(null)}
+            onConfirm={() => {
+              if (removeConnectionConfirm.step === 1) {
+                setRemoveConnectionConfirm((current) => (current ? { ...current, step: 2 } : current));
+                return;
+              }
+
+              void executeRemoveConnection();
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -1930,6 +2015,9 @@ export default function MarketMvpApp() {
                       </span>
                     ) : null}
                   </div>
+                  <button onClick={() => promptRemoveConnection(chat.connection.id)} className="mt-3 w-full rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs font-medium text-[#B91C1C]">
+                    {copy.removeConnection}
+                  </button>
                   <div className="mt-4 divide-y divide-[#EEE9E0] overflow-hidden rounded-2xl border border-[#D8D0C4] bg-white">
                     {[
                       [locale === 'zh' ? '年龄' : 'Age', `${otherProfile.age}岁`],
@@ -2215,7 +2303,7 @@ function EmptyState({ label }: { label: string }) {
   return <div className="rounded-xl border border-dashed border-[#D8D0C4] bg-[#FAFAF8] p-4 text-sm text-[#7A6E62]">{label}</div>;
 }
 
-function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile, onCancel, onOpenChat }: { connection: ConnectionRecord; locale: Locale; onApprove?: (id: string) => Promise<void>; onReject?: (id: string) => Promise<void>; onViewProfile?: (id: string) => Promise<void>; onCancel?: (id: string) => Promise<void>; onOpenChat?: (id: string) => Promise<void>; }) {
+function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile, onCancel, onOpenChat, onRemoveConnection }: { connection: ConnectionRecord; locale: Locale; onApprove?: (id: string) => Promise<void>; onReject?: (id: string) => Promise<void>; onViewProfile?: (id: string) => Promise<void>; onCancel?: (id: string) => Promise<void>; onOpenChat?: (id: string) => Promise<void>; onRemoveConnection?: (id: string) => void; }) {
   const profile = connection.otherProfile ?? connection.targetProfile ?? connection.requesterProfile;
   if (!profile) {
     return null;
@@ -2236,7 +2324,27 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
         {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
         {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
         {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
-        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
+        {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white hover:bg-[#256F3C]">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
+        {onRemoveConnection && connection.status === 'approved' ? <button onClick={() => onRemoveConnection(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '移除连接' : 'Remove connection'}</button> : null}
+      </div>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, description, cancelLabel, confirmLabel, onCancel, onConfirm }: { title: string; description: string; cancelLabel: string; confirmLabel: string; onCancel: () => void; onConfirm: () => void; }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#D8D0C4] bg-white p-5 shadow-xl">
+        <div className="text-base font-semibold text-[#1A1208]">{title}</div>
+        <p className="mt-2 text-sm leading-7 text-[#5A5248]">{description}</p>
+        <div className="mt-5 flex gap-3">
+          <button onClick={onCancel} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-4 py-2.5 text-sm font-medium text-[#5A5248]">
+            {cancelLabel}
+          </button>
+          <button onClick={onConfirm} className="flex-1 rounded-lg bg-[#B5272A] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#9E2224]">
+            {confirmLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

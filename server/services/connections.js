@@ -176,6 +176,34 @@ async function cancelConnection(connectionId, userId) {
   });
 }
 
+async function removeConnection(connectionId, userId) {
+  return withState(async (state) => {
+    const index = state.connections.findIndex((candidate) => candidate.id === connectionId);
+    if (index === -1) {
+      const error = new Error('CONNECTION_NOT_FOUND');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const connection = state.connections[index];
+    const isParticipant = connection.requesterUserId === userId || connection.targetUserId === userId;
+    if (!isParticipant) {
+      const error = new Error('FORBIDDEN');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (connection.status !== 'approved') {
+      const error = new Error('REMOVE_NOT_ALLOWED');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    state.connections.splice(index, 1);
+    return computeConnectionView(connection, userId, state);
+  });
+}
+
 async function isApprovedParticipant(connectionId, userId) {
   await withState(async () => undefined);
   const state = getState();
@@ -206,6 +234,7 @@ export {
   getConnectionForChat,
   isApprovedParticipant,
   listConnections,
+  removeConnection,
   rejectConnection,
   requestConnection,
 };

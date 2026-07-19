@@ -121,6 +121,7 @@ export const api = {
   approveConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/approve`, { method: 'POST' }, token),
   rejectConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/reject`, { method: 'POST' }, token),
   cancelConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/cancel`, { method: 'POST' }, token),
+  removeConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/remove`, { method: 'POST' }, token),
   loadChat: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord; messages: MessageRecord[] }>(`/api/chats/${connectionId}`, {}, token),
   sendMessage: (token: string, connectionId: string, text: string) => requestJson<{ message: MessageRecord }>(`/api/chats/${connectionId}/messages`, { method: 'POST', body: JSON.stringify({ text }) }, token),
 };

@@ -71,7 +71,7 @@
       "passwordHash": "9e47974c45768a2bdacef8f3358c6df46f9987bd0701b04f7103e07c01da599b",
       "createdAt": "2026-07-18T05:22:25.024Z",
       "language": "en",
-      "lastSeenAt": "2026-07-19T09:37:34.566Z"
+      "lastSeenAt": "2026-07-19T09:42:23.438Z"
     },
     {
       "id": "user_8d82b945",
@@ -560,16 +560,6 @@
       "updatedAt": "2026-07-18T05:12:13.139Z"
     },
     {
-      "id": "connection_199ef426",
-      "requesterUserId": "user_440418ff",
-      "requesterProfileId": "profile_9d0ae5c1",
-      "targetUserId": "user_seed_5",
-      "targetProfileId": "profile_4",
-      "status": "pending",
-      "createdAt": "2026-07-18T05:25:57.511Z",
-      "updatedAt": "2026-07-18T05:25:57.511Z"
-    },
-    {
       "id": "connection_7b411bbf",
       "requesterUserId": "user_f47af986",
       "requesterProfileId": "profile_c8192c4f",
@@ -608,6 +598,46 @@
       "status": "pending",
       "createdAt": "2026-07-19T01:35:06.733Z",
       "updatedAt": "2026-07-19T01:35:06.733Z"
+    },
+    {
+      "id": "connection_928693a4",
+      "requesterUserId": "user_440418ff",
+      "requesterProfileId": "profile_9d0ae5c1",
+      "targetUserId": "user_73e85163",
+      "targetProfileId": "profile_c3f11bce",
+      "status": "pending",
+      "createdAt": "2026-07-19T09:40:52.908Z",
+      "updatedAt": "2026-07-19T09:40:52.908Z"
+    },
+    {
+      "id": "connection_7811fa58",
+      "requesterUserId": "user_440418ff",
+      "requesterProfileId": "profile_9d0ae5c1",
+      "targetUserId": "user_42a0546c",
+      "targetProfileId": "profile_c7513cb6",
+      "status": "pending",
+      "createdAt": "2026-07-19T09:40:55.258Z",
+      "updatedAt": "2026-07-19T09:40:55.258Z"
+    },
+    {
+      "id": "connection_3b8e5ca1",
+      "requesterUserId": "user_440418ff",
+      "requesterProfileId": "profile_9d0ae5c1",
+      "targetUserId": "user_db3e9485",
+      "targetProfileId": "profile_437e70b3",
+      "status": "pending",
+      "createdAt": "2026-07-19T09:40:55.942Z",
+      "updatedAt": "2026-07-19T09:40:55.942Z"
+    },
+    {
+      "id": "connection_eeb2ca69",
+      "requesterUserId": "user_440418ff",
+      "requesterProfileId": "profile_9d0ae5c1",
+      "targetUserId": "user_8d82b945",
+      "targetProfileId": "profile_b2ba7c9a",
+      "status": "pending",
+      "createdAt": "2026-07-19T09:41:36.999Z",
+      "updatedAt": "2026-07-19T09:41:36.999Z"
     }
   ],
   "messages": [
