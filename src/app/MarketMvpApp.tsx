@@ -632,6 +632,20 @@ function formatLastSeen(lastSeenAt?: string | null) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
+function formatLastSeenHours(lastSeenAt?: string | null) {
+  if (!lastSeenAt) {
+    return '';
+  }
+
+  const deltaMs = Date.now() - new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+    return 'just now';
+  }
+
+  const hours = Math.max(1, Math.ceil(deltaMs / 3600000));
+  return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+}
+
 function ProfilePill({ profile }: { profile: ProfileRecord }) {
   return <Badge tone={profile.hukou === '上海' ? 'gold' : 'default'}>{profile.hukou === '上海' ? '沪籍' : profile.hukou}</Badge>;
 }
@@ -1886,6 +1900,8 @@ export default function MarketMvpApp() {
 
   if (screen === 'chat' && chat) {
     const otherProfile = chat.connection.otherProfile ?? chat.connection.targetProfile ?? chat.connection.requesterProfile ?? null;
+    const isOnline = otherProfile?.presence?.status === 'online';
+    const lastSeenHours = formatLastSeenHours(otherProfile?.presence?.lastSeenAt);
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
@@ -1902,6 +1918,17 @@ export default function MarketMvpApp() {
                   <div className="mt-1 flex items-end gap-2">
                     <div className="text-xl font-semibold">{otherProfile.gender}</div>
                     <div className="text-2xl font-semibold text-[#1A1208]">{otherProfile.childAlias || '—'}</div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${isOnline ? 'bg-[#2C8A4A]' : 'bg-[#B91C1C]'}`} />
+                    <span className={`text-xs font-semibold uppercase ${isOnline ? 'text-[#2C8A4A]' : 'text-[#B91C1C]'}`}>
+                      {isOnline ? (locale === 'zh' ? '在线' : 'online') : (locale === 'zh' ? '离线' : 'offline')}
+                    </span>
+                    {!isOnline && lastSeenHours ? (
+                      <span className="text-[11px] text-[#7A6E62]">
+                        {locale === 'zh' ? `最后在线 ${lastSeenHours}` : `Last seen ${lastSeenHours}`}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="mt-4 divide-y divide-[#EEE9E0] overflow-hidden rounded-2xl border border-[#D8D0C4] bg-white">
                     {[
@@ -2022,13 +2049,13 @@ export default function MarketMvpApp() {
           <div className="mt-4 flex justify-end">
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-[10px] font-mono text-[#7A6E62]">
-                Sort
+                {locale === 'zh' ? '排序' : 'Sort'}
                 <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="rounded-xl border border-[#D8D0C4] bg-white px-3 py-2 text-xs outline-none focus:border-[#B5272A]">
-                  <option value="latest">Latest</option>
-                  <option value="age-asc">Age asc</option>
-                  <option value="age-desc">Age desc</option>
-                  <option value="height-asc">Height asc</option>
-                  <option value="height-desc">Height desc</option>
+                  <option value="latest">{locale === 'zh' ? '最新发布' : 'Latest'}</option>
+                  <option value="age-asc">{locale === 'zh' ? '年龄升序' : 'Age asc'}</option>
+                  <option value="age-desc">{locale === 'zh' ? '年龄降序' : 'Age desc'}</option>
+                  <option value="height-asc">{locale === 'zh' ? '身高升序' : 'Height asc'}</option>
+                  <option value="height-desc">{locale === 'zh' ? '身高降序' : 'Height desc'}</option>
                 </select>
               </label>
               <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] transition-colors">
