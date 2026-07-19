@@ -26,7 +26,7 @@
 
   ### Password Reset Email Setup
 
-  The forgot-password flow sends reset emails when SMTP is configured. Set these environment variables before running the server or deploying:
+  The forgot-password flow configured. Set these environment variables before running the server or deploying:
 
   ```bash
   SMTP_HOST=smtp.your-provider.com

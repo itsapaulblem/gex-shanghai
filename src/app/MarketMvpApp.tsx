@@ -113,7 +113,7 @@ const COPY: Record<Locale, Copy> = {
     email: '邮箱',
     password: '密码',
     signIn: '登录 / 注册',
-    createAccount: '创建账户',
+    createAccount: '注册',
     forgotPassword: '忘记密码？',
     forgotPasswordTitle: '重置账户密码',
     forgotPasswordDescription: '输入注册邮箱，我们会发送一封重置密码邮件。点击邮件中的链接后即可设置新密码。',
