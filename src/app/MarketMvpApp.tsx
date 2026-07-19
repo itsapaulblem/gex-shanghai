@@ -1735,7 +1735,7 @@ export default function MarketMvpApp() {
               </select>
             </label>
           </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="mt-4 flex justify-end">
             <div className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-[10px] font-mono text-[#7A6E62]">
                 Sort
