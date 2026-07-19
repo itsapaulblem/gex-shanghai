@@ -1288,7 +1288,7 @@ export default function MarketMvpApp() {
                     onChange={(event) => setAuthEmail(event.target.value)}
                     type="email"
                     className={inputClass}
-                    placeholder="parent@example.com"
+                    placeholder="12345678@qq.com"
                   />
                 </label>
                 <label className="block">
@@ -1350,7 +1350,7 @@ export default function MarketMvpApp() {
             onChange={(event) => setForgotEmail(event.target.value)}
             type="email"
             className={inputClass}
-            placeholder="parent@example.com"
+            placeholder="12345678@qq.com"
           />
         </label>
 
