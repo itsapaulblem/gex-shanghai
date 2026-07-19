@@ -2015,9 +2015,6 @@ export default function MarketMvpApp() {
                       </span>
                     ) : null}
                   </div>
-                  <button onClick={() => promptRemoveConnection(chat.connection.id)} className="mt-3 w-full rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs font-medium text-[#B91C1C]">
-                    {copy.removeConnection}
-                  </button>
                   <div className="mt-4 divide-y divide-[#EEE9E0] overflow-hidden rounded-2xl border border-[#D8D0C4] bg-white">
                     {[
                       [locale === 'zh' ? '年龄' : 'Age', `${otherProfile.age}岁`],
