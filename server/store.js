@@ -77,6 +77,7 @@ function seedState() {
   return {
     users: seededUsers,
     sessions: [],
+    passwordResetTokens: [],
     profiles: [
       {
         id: 'profile_1',
@@ -253,6 +254,7 @@ async function loadState() {
       }
       state.users ??= [];
       state.sessions ??= [];
+      state.passwordResetTokens ??= [];
       state.profiles ??= [];
       state.connections ??= [];
       state.messages ??= [];

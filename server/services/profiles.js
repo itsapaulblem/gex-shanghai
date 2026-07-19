@@ -12,6 +12,22 @@ function toProfileResponse(profile, state) {
 }
 
 function buildProfilePayload(input) {
+  const preferenceDetails = {
+    preferredAgeRange: input.preferredAgeRange?.trim() ?? '',
+    preferredHeightRange: input.preferredHeightRange?.trim() ?? '',
+    minEducationLevel: input.minEducationLevel?.trim() ?? '',
+    hukouPreference: input.hukouPreference?.trim() ?? '',
+    additionalPreferences: input.additionalPreferences?.trim() ?? '',
+  };
+
+  const preferencesSummary = [
+    preferenceDetails.preferredAgeRange,
+    preferenceDetails.preferredHeightRange,
+    preferenceDetails.minEducationLevel,
+    preferenceDetails.hukouPreference,
+    preferenceDetails.additionalPreferences,
+  ].filter(Boolean).join(' · ');
+
   return {
     honorific: input.honorific?.trim() ?? '',
     surname: input.surname?.trim() ?? '',
@@ -35,7 +51,8 @@ function buildProfilePayload(input) {
     traits: input.traits.filter(Boolean).map((item) => item.trim()),
     hobbies: input.hobbies.trim(),
     about: input.about.trim(),
-    preferences: input.preferences.trim(),
+    ...preferenceDetails,
+    preferences: preferencesSummary,
   };
 }
 
@@ -46,7 +63,7 @@ function applyFilters(profiles, filters = {}) {
   const education = filters.education ?? 'all';
 
   return profiles.filter((profile) => {
-    const matchesSearch = !search || [profile.childAlias, profile.city, profile.hukou, profile.industry, profile.school, profile.about, profile.preferences]
+    const matchesSearch = !search || [profile.childAlias, profile.city, profile.hukou, profile.industry, profile.school, profile.about, profile.preferences, profile.preferredAgeRange, profile.preferredHeightRange, profile.minEducationLevel, profile.hukouPreference, profile.additionalPreferences]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(search));
 

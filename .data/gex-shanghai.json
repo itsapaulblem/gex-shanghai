@@ -54,7 +54,7 @@
       "passwordHash": "5bf5d859febc9ad0d4f6912b2304105678d09d3a0fb34bbf5559f216e4db08da",
       "createdAt": "2026-07-18T04:34:59.444Z",
       "language": "en",
-      "lastSeenAt": "2026-07-19T01:35:07.364Z"
+      "lastSeenAt": "2026-07-19T07:45:43.179Z"
     },
     {
       "id": "user_42a0546c",
@@ -598,6 +598,22 @@
       "senderUserId": "user_8d82b945",
       "text": "hello",
       "createdAt": "2026-07-18T13:32:57.355Z"
+    }
+  ],
+  "passwordResetTokens": [
+    {
+      "id": "reset_30203da4",
+      "userId": "user_db3e9485",
+      "tokenHash": "aae8ce4aa13dfd652f68d1be1c3137c192453e0c872ecdc20decb81a1a7d4dea",
+      "createdAt": "2026-07-19T07:39:52.658Z",
+      "expiresAt": "2026-07-19T08:39:52.658Z"
+    },
+    {
+      "id": "reset_244d0948",
+      "userId": "user_8d82b945",
+      "tokenHash": "b2d8f5d04e0de33aedbd1dfb4aebc287a9bcb59290908a0932adf5973d8482fc",
+      "createdAt": "2026-07-19T07:40:28.488Z",
+      "expiresAt": "2026-07-19T08:40:28.488Z"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { api, type ConnectionRecord, type Locale, type MessageRecord, type ProfileRecord, type SessionRecord } from './lib/api';
 
-type Screen = 'auth' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
+type Screen = 'auth' | 'forgot-password' | 'reset-password' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
 type AuthMode = 'login' | 'register';
 type GenderFilter = 'all' | '男' | '女';
 type SortMode = 'latest' | 'age-asc' | 'age-desc' | 'height-asc' | 'height-desc';
@@ -69,6 +69,18 @@ type Copy = {
   password: string;
   signIn: string;
   createAccount: string;
+  forgotPassword: string;
+  forgotPasswordTitle: string;
+  forgotPasswordDescription: string;
+  forgotPasswordSubmit: string;
+  forgotPasswordBack: string;
+  forgotPasswordSuccess: string;
+  resetPasswordTitle: string;
+  resetPasswordDescription: string;
+  resetPasswordSubmit: string;
+  resetPasswordSuccess: string;
+  newPassword: string;
+  confirmPassword: string;
   language: string;
   browse: string;
   profileSetup: string;
@@ -102,6 +114,18 @@ const COPY: Record<Locale, Copy> = {
     password: '密码',
     signIn: '登录 / 注册',
     createAccount: '创建账户',
+    forgotPassword: '忘记密码？',
+    forgotPasswordTitle: '重置账户密码',
+    forgotPasswordDescription: '输入注册邮箱，我们会发送一封重置密码邮件。点击邮件中的链接后即可设置新密码。',
+    forgotPasswordSubmit: '发送重置邮件',
+    forgotPasswordBack: '返回登录',
+    forgotPasswordSuccess: 'Success! Reset email sent if the account exists.',
+    resetPasswordTitle: '设置新密码',
+    resetPasswordDescription: '请输入新密码。密码至少 8 位，包含 1 个大写字母和 1 个特殊字符。',
+    resetPasswordSubmit: '更新密码',
+    resetPasswordSuccess: 'Success! Password updated. Please sign in again.',
+    newPassword: '新密码',
+    confirmPassword: '确认新密码',
     language: 'English',
     browse: '浏览相亲角',
     profileSetup: '创建子女档案',
@@ -133,6 +157,18 @@ const COPY: Record<Locale, Copy> = {
     password: 'Password',
     signIn: 'Sign in / Register',
     createAccount: 'Create account',
+    forgotPassword: 'Forgot password?',
+    forgotPasswordTitle: 'Reset your password',
+    forgotPasswordDescription: 'Enter the account email and we will send a password reset link. Open the link in the email to choose a new password.',
+    forgotPasswordSubmit: 'Send reset email',
+    forgotPasswordBack: 'Back to sign in',
+    forgotPasswordSuccess: 'Success! Reset email sent if the account exists.',
+    resetPasswordTitle: 'Choose a new password',
+    resetPasswordDescription: 'Your new password must be at least 8 characters long and include 1 uppercase letter and 1 special character.',
+    resetPasswordSubmit: 'Update password',
+    resetPasswordSuccess: 'Success! Password updated. Please sign in again.',
+    newPassword: 'New password',
+    confirmPassword: 'Confirm password',
     language: '中文',
     browse: 'Browse profiles',
     profileSetup: 'Create child profile',
@@ -215,6 +251,18 @@ const AGE_RANGE_OPTIONS = [
   { label: '40+', value: '40+' },
 ];
 
+const PREFERRED_AGE_OPTIONS = [
+  { label: 'No preference / 不限', value: '' },
+  { label: '20-24', value: '20-24' },
+  { label: '24-26', value: '24-26' },
+  { label: '26-28', value: '26-28' },
+  { label: '28-30', value: '28-30' },
+  { label: '30-32', value: '30-32' },
+  { label: '32-35', value: '32-35' },
+  { label: '35-40', value: '35-40' },
+  { label: '40+', value: '40+' },
+];
+
 const SALARY_RANGE_OPTIONS = [
   { label: 'Any salary', value: 'all' },
   { label: '0-1万/月', value: '0-1万/月' },
@@ -235,6 +283,23 @@ const HEIGHT_RANGE_OPTIONS = [
   { label: '170+', value: '170+' },
   { label: '175+', value: '175+' },
   { label: '180+', value: '180+' },
+];
+
+const PREFERRED_HEIGHT_OPTIONS = [
+  { label: 'No preference / 不限', value: '' },
+  { label: '155-160 cm', value: '155-160 cm' },
+  { label: '160-165 cm', value: '160-165 cm' },
+  { label: '165-170 cm', value: '165-170 cm' },
+  { label: '170-175 cm', value: '170-175 cm' },
+  { label: '175-180 cm', value: '175-180 cm' },
+  { label: '180+ cm', value: '180+ cm' },
+];
+
+const HUKOU_PREFERENCE_OPTIONS = [
+  { label: 'No preference / 不限', value: '' },
+  { label: 'Shanghai hukou preferred / 上海户籍优先', value: 'Shanghai hukou preferred' },
+  { label: 'Shanghai hukou only / 仅限上海户籍', value: 'Shanghai hukou only' },
+  { label: 'Open to non-Shanghai hukou / 接受非上海户籍', value: 'Open to non-Shanghai hukou' },
 ];
 
 const EDUCATION_LEVEL_OPTIONS = [
@@ -352,6 +417,7 @@ function buildPaginationItems(totalPages: number, currentPage: number) {
 }
 
 const BIRTH_YEARS = Array.from({ length: 2026 - 1940 + 1 }, (_, index) => String(2026 - index));
+const CURRENT_YEAR = new Date().getFullYear();
 
 const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
   'honorific',
@@ -388,7 +454,7 @@ const PROFILE_SETUP_STEPS: { title: { zh: string; en: string }; fields: (keyof P
   },
   {
     title: { zh: '个人描述', en: 'Profile story' },
-    fields: ['traits', 'hobbies', 'preferredAgeRange', 'preferredHeightRange', 'minEducationLevel', 'hukouPreference', 'additionalPreferences'],
+    fields: ['traits', 'hobbies', 'about', 'preferredAgeRange', 'preferredHeightRange', 'minEducationLevel', 'hukouPreference', 'additionalPreferences'],
   },
 ];
 
@@ -430,6 +496,34 @@ function getInitialLocale(): Locale {
 
 function getInitialToken() {
   return window.localStorage.getItem('gex-token');
+}
+
+function calculateAgeFromBirthYear(birthYear: string) {
+  const year = Number(birthYear);
+  if (!Number.isFinite(year) || year <= 0) {
+    return '';
+  }
+
+  return String(Math.max(0, CURRENT_YEAR - year));
+}
+
+function getPreferenceParts(preferences = '') {
+  return preferences
+    .split(/[·;；|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getPreferenceDetails(profile?: ProfileRecord | null) {
+  const fallbackParts = getPreferenceParts(profile?.preferences ?? '');
+
+  return {
+    preferredAgeRange: profile?.preferredAgeRange ?? fallbackParts[0] ?? '',
+    preferredHeightRange: profile?.preferredHeightRange ?? fallbackParts[1] ?? '',
+    minEducationLevel: profile?.minEducationLevel ?? fallbackParts[2] ?? '',
+    hukouPreference: profile?.hukouPreference ?? fallbackParts[3] ?? '',
+    additionalPreferences: profile?.additionalPreferences ?? fallbackParts[4] ?? '',
+  };
 }
 
 function getPendingOutgoingConnection(
@@ -570,6 +664,14 @@ export default function MarketMvpApp() {
   const [authPassword, setAuthPassword] = useState('');
   const [authPasswordVisible, setAuthPasswordVisible] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [resetToken, setResetToken] = useState('');
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('');
+  const [resetPasswordVisible, setResetPasswordVisible] = useState(false);
+  const [resetConfirmVisible, setResetConfirmVisible] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
   const [setupStep, setSetupStep] = useState(1);
   const [browsePage, setBrowsePage] = useState(1);
@@ -606,6 +708,10 @@ export default function MarketMvpApp() {
       EMAIL_EXISTS: 'Error! Email exists!',
       INVALID_CREDENTIALS: 'Error! Wrong Password!',
       PASSWORD_TOO_WEAK: 'Error! Password needs 8 characters, one uppercase letter, and one special character!',
+      PASSWORD_MISMATCH: 'Error! Passwords do not match!',
+      RESET_TOKEN_REQUIRED: 'Error! Reset link is missing!',
+      RESET_TOKEN_INVALID: 'Error! Reset link is invalid!',
+      RESET_TOKEN_EXPIRED: 'Error! Reset link expired! Request a new one.',
       CANCEL_NOT_ALLOWED: 'Error! Only pending requests can be cancelled!',
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
@@ -617,13 +723,15 @@ export default function MarketMvpApp() {
   }
 
   function populateProfileForm(profile?: ProfileRecord | null) {
+    const preferenceDetails = getPreferenceDetails(profile);
+
     setProfileForm({
       honorific: profile?.honorific ?? 'Mr',
       surname: profile?.surname ?? '',
       childAlias: profile?.childAlias ?? '',
       gender: profile?.gender ?? '男',
       birthYear: String(profile?.birthYear ?? 1995),
-      age: String(profile?.age ?? 31),
+      age: calculateAgeFromBirthYear(String(profile?.birthYear ?? 1995)),
       height: String(profile?.height ?? 175),
       weight: String(profile?.weight ?? 65),
       city: profile?.city ?? '上海',
@@ -639,11 +747,11 @@ export default function MarketMvpApp() {
       car: profile?.car ?? '有车',
       traits: profile?.traits?.join(', ') ?? '',
       hobbies: profile?.hobbies ?? '',
-      preferredAgeRange: '',
-      preferredHeightRange: '',
-      minEducationLevel: '',
-      hukouPreference: '',
-      additionalPreferences: '',
+      preferredAgeRange: preferenceDetails.preferredAgeRange,
+      preferredHeightRange: preferenceDetails.preferredHeightRange,
+      minEducationLevel: preferenceDetails.minEducationLevel,
+      hukouPreference: preferenceDetails.hukouPreference,
+      additionalPreferences: preferenceDetails.additionalPreferences,
       about: profile?.about ?? '',
       preferences: profile?.preferences ?? '',
     });
@@ -704,6 +812,22 @@ export default function MarketMvpApp() {
   }
 
   useEffect(() => {
+    const calculatedAge = calculateAgeFromBirthYear(profileForm.birthYear);
+    setProfileForm((current) => (current.age === calculatedAge ? current : { ...current, age: calculatedAge }));
+  }, [profileForm.birthYear]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get('resetToken');
+
+    if (tokenFromUrl) {
+      setResetToken(tokenFromUrl);
+      setScreen('reset-password');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
     refreshSession().catch((error) => {
       window.localStorage.removeItem('gex-token');
       setToken(null);
@@ -754,6 +878,44 @@ export default function MarketMvpApp() {
     }
   }
 
+  async function submitForgotPassword() {
+    try {
+      setForgotBusy(true);
+      await api.requestPasswordReset({ email: forgotEmail });
+      showNotice(copy.forgotPasswordSuccess, 'success');
+      setScreen('auth');
+      setAuthMode('login');
+      setAuthEmail(forgotEmail.trim());
+    } catch (error) {
+      showNotice(formatErrorMessage(error));
+    } finally {
+      setForgotBusy(false);
+    }
+  }
+
+  async function submitPasswordReset() {
+    try {
+      if (resetPasswordValue !== resetPasswordConfirm) {
+        throw new Error('PASSWORD_MISMATCH');
+      }
+
+      setResetBusy(true);
+      await api.resetPassword({ token: resetToken, password: resetPasswordValue });
+      setResetToken('');
+      setResetPasswordValue('');
+      setResetPasswordConfirm('');
+      setAuthPassword('');
+      setAuthPasswordVisible(false);
+      setScreen('auth');
+      setAuthMode('login');
+      showNotice(copy.resetPasswordSuccess, 'success');
+    } catch (error) {
+      showNotice(formatErrorMessage(error));
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
   async function submitProfile() {
     if (!token) {
       return;
@@ -777,14 +939,7 @@ export default function MarketMvpApp() {
         height: Number(profileForm.height),
         weight: Number(profileForm.weight),
         traits: toTraits(profileForm.traits),
-        about: profileForm.traits,
-        preferences: [
-          profileForm.preferredAgeRange,
-          profileForm.preferredHeightRange,
-          profileForm.minEducationLevel,
-          profileForm.hukouPreference,
-          profileForm.additionalPreferences,
-        ].filter(Boolean).join(' · '),
+        about: profileForm.about,
       };
       if (ownProfile) {
         await api.updateOwnProfile(token, payload);
@@ -1023,11 +1178,11 @@ export default function MarketMvpApp() {
   const activeBrowsePage = Math.min(browsePage, browsePageCount);
   const pagedBrowseProfiles = browsableProfiles.slice((activeBrowsePage - 1) * 6, activeBrowsePage * 6);
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#F7F4EF] text-[#5A5248]">Loading...</div>;
-  }
+  const primaryButtonClass = 'flex w-full items-center justify-center gap-2 rounded-lg bg-[#B5272A] px-4 py-3 text-base font-medium text-white hover:bg-[#9E2224] disabled:opacity-60';
+  const inputClass = 'w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-base outline-none focus:border-[#A87C1A]';
+  const passwordInputClass = `${inputClass} pr-12`;
 
-  if (screen === 'auth') {
+  function renderAuthScaffold(cardContent: ReactNode, heading = copy.authTitle, description = copy.authDescription) {
     return (
       <div className="relative min-h-screen bg-[#F7F4EF] text-[#1A1208]">
         <button
@@ -1052,8 +1207,8 @@ export default function MarketMvpApp() {
               <div className="mb-4 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-[#B5272A]">
                 <Sparkles size={14} /> {locale === 'zh' ? '责任撮合 · 以家为本' : 'Responsible matchmaking · family first'}
               </div>
-              <h1 className="font-serif text-5xl font-semibold leading-tight">{copy.authTitle}</h1>
-              <p className="mt-4 max-w-2xl text-base leading-8 text-[#5A5248]">{copy.authDescription}</p>
+              <h1 className="font-serif text-5xl font-semibold leading-tight">{heading}</h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-[#5A5248]">{description}</p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
                 {[
@@ -1088,6 +1243,22 @@ export default function MarketMvpApp() {
 
           <div className="flex items-center justify-center px-6 py-10 lg:px-10">
             <Card className="w-full max-w-md p-6 shadow-sm">
+              {cardContent}
+            </Card>
+          </div>
+        </div>
+        {notice ? <Toast notice={notice} /> : null}
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#F7F4EF] text-[#5A5248]">Loading...</div>;
+  }
+
+  if (screen === 'auth') {
+    return renderAuthScaffold(
+      <>
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <div className="text-sm font-semibold text-[#1A1208]">{authMode === 'login' ? copy.login : copy.register}</div>
@@ -1116,7 +1287,7 @@ export default function MarketMvpApp() {
                     value={authEmail}
                     onChange={(event) => setAuthEmail(event.target.value)}
                     type="email"
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-base outline-none focus:border-[#A87C1A]"
+                    className={inputClass}
                     placeholder="parent@example.com"
                   />
                 </label>
@@ -1127,7 +1298,7 @@ export default function MarketMvpApp() {
                       value={authPassword}
                       onChange={(event) => setAuthPassword(event.target.value)}
                       type={authPasswordVisible ? 'text' : 'password'}
-                      className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 pr-12 text-base outline-none focus:border-[#A87C1A]"
+                      className={passwordInputClass}
                       placeholder="********"
                     />
                     <button
@@ -1140,19 +1311,133 @@ export default function MarketMvpApp() {
                     </button>
                   </div>
                 </label>
+                {authMode === 'login' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail(authEmail.trim());
+                      setScreen('forgot-password');
+                    }}
+                    className="text-sm font-medium text-[#B5272A] hover:text-[#9E2224]"
+                  >
+                    {copy.forgotPassword}
+                  </button>
+                ) : null}
                 <button
                   onClick={submitAuth}
                   disabled={authBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B5272A] px-4 py-3 text-base font-medium text-white hover:bg-[#9E2224] disabled:opacity-60"
+                  className={primaryButtonClass}
                 >
                   <LogIn size={16} /> {copy.signIn}
                 </button>
               </div>
-            </Card>
-          </div>
+      </>,
+    );
+  }
+
+  if (screen === 'forgot-password') {
+    return renderAuthScaffold(
+      <div className="space-y-5">
+        <div>
+          <div className="text-sm font-semibold text-[#1A1208]">{copy.forgotPasswordTitle}</div>
+          <p className="mt-2 text-sm leading-7 text-[#5A5248]">{copy.forgotPasswordDescription}</p>
         </div>
-        {notice ? <Toast notice={notice} /> : null}
-      </div>
+
+        <label className="block">
+          <div className="mb-1 text-xs font-medium text-[#1A1208]">{copy.email}</div>
+          <input
+            value={forgotEmail}
+            onChange={(event) => setForgotEmail(event.target.value)}
+            type="email"
+            className={inputClass}
+            placeholder="parent@example.com"
+          />
+        </label>
+
+        <button onClick={submitForgotPassword} disabled={forgotBusy} className={primaryButtonClass}>
+          <Send size={16} /> {copy.forgotPasswordSubmit}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setScreen('auth')}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#5A5248] hover:text-[#1A1208]"
+        >
+          <ArrowLeft size={16} /> {copy.forgotPasswordBack}
+        </button>
+      </div>,
+      copy.forgotPasswordTitle,
+      copy.forgotPasswordDescription,
+    );
+  }
+
+  if (screen === 'reset-password') {
+    return renderAuthScaffold(
+      <div className="space-y-5">
+        <div>
+          <div className="text-sm font-semibold text-[#1A1208]">{copy.resetPasswordTitle}</div>
+          <p className="mt-2 text-sm leading-7 text-[#5A5248]">{copy.resetPasswordDescription}</p>
+        </div>
+
+        <label className="block">
+          <div className="mb-1 text-xs font-medium text-[#1A1208]">{copy.newPassword}</div>
+          <div className="relative">
+            <input
+              value={resetPasswordValue}
+              onChange={(event) => setResetPasswordValue(event.target.value)}
+              type={resetPasswordVisible ? 'text' : 'password'}
+              className={passwordInputClass}
+              placeholder="********"
+            />
+            <button
+              type="button"
+              onClick={() => setResetPasswordVisible((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-[#7A6E62]"
+              aria-label={resetPasswordVisible ? (locale === 'zh' ? '隐藏密码' : 'Hide password') : (locale === 'zh' ? '显示密码' : 'Show password')}
+            >
+              {resetPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </label>
+
+        <label className="block">
+          <div className="mb-1 text-xs font-medium text-[#1A1208]">{copy.confirmPassword}</div>
+          <div className="relative">
+            <input
+              value={resetPasswordConfirm}
+              onChange={(event) => setResetPasswordConfirm(event.target.value)}
+              type={resetConfirmVisible ? 'text' : 'password'}
+              className={passwordInputClass}
+              placeholder="********"
+            />
+            <button
+              type="button"
+              onClick={() => setResetConfirmVisible((current) => !current)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-[#7A6E62]"
+              aria-label={resetConfirmVisible ? (locale === 'zh' ? '隐藏密码' : 'Hide password') : (locale === 'zh' ? '显示密码' : 'Show password')}
+            >
+              {resetConfirmVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </label>
+
+        <button onClick={submitPasswordReset} disabled={resetBusy} className={primaryButtonClass}>
+          <CheckCircle2 size={16} /> {copy.resetPasswordSubmit}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setResetToken('');
+            setScreen('forgot-password');
+          }}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#5A5248] hover:text-[#1A1208]"
+        >
+          <ArrowLeft size={16} /> {copy.forgotPasswordBack}
+        </button>
+      </div>,
+      copy.resetPasswordTitle,
+      copy.resetPasswordDescription,
     );
   }
 
@@ -1162,7 +1447,7 @@ export default function MarketMvpApp() {
 
     function renderProfileField(fieldKey: keyof ProfileFormState) {
       const fieldLabel = PROFILE_FIELD_LABELS[fieldKey];
-      const isWideField = fieldKey === 'gender' || fieldKey === 'traits' || fieldKey === 'hobbies' || fieldKey === 'preferredAgeRange' || fieldKey === 'preferredHeightRange' || fieldKey === 'hukouPreference' || fieldKey === 'additionalPreferences';
+      const isWideField = fieldKey === 'gender' || fieldKey === 'traits' || fieldKey === 'hobbies' || fieldKey === 'about' || fieldKey === 'preferredAgeRange' || fieldKey === 'preferredHeightRange' || fieldKey === 'hukouPreference' || fieldKey === 'additionalPreferences';
       const labelText = locale === 'zh' ? `${fieldLabel.zh} / ${fieldLabel.en}` : `${fieldLabel.en} / ${fieldLabel.zh}`;
       const required = REQUIRED_PROFILE_FIELDS.includes(fieldKey);
 
@@ -1186,11 +1471,18 @@ export default function MarketMvpApp() {
           ) : fieldKey === 'birthYear' ? (
             <select
               value={profileForm.birthYear}
-              onChange={(event) => setProfileForm((current) => ({ ...current, birthYear: event.target.value }))}
+              onChange={(event) => setProfileForm((current) => ({ ...current, birthYear: event.target.value, age: calculateAgeFromBirthYear(event.target.value) }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
               {BIRTH_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
             </select>
+          ) : fieldKey === 'age' ? (
+            <input
+              value={profileForm.age}
+              readOnly
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#F1ECE3] px-4 py-3 text-sm text-[#5A5248] outline-none"
+              placeholder={locale === 'zh' ? '根据出生年份自动计算' : 'Auto-filled from birth year'}
+            />
           ) : fieldKey === 'honorific' ? (
             <select
               value={profileForm.honorific}
@@ -1224,41 +1516,44 @@ export default function MarketMvpApp() {
               {['有车', '无车'].map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           ) : fieldKey === 'preferredAgeRange' ? (
-            <input
+            <select
               value={profileForm.preferredAgeRange}
               onChange={(event) => setProfileForm((current) => ({ ...current, preferredAgeRange: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-              placeholder={locale === 'zh' ? 'e.g. 28–35岁' : 'e.g. 28-35'}
-            />
+            >
+              {PREFERRED_AGE_OPTIONS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}
+            </select>
           ) : fieldKey === 'preferredHeightRange' ? (
-            <input
+            <select
               value={profileForm.preferredHeightRange}
               onChange={(event) => setProfileForm((current) => ({ ...current, preferredHeightRange: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-              placeholder={locale === 'zh' ? 'e.g. 170cm以上' : 'e.g. 170cm or taller'}
-            />
+            >
+              {PREFERRED_HEIGHT_OPTIONS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}
+            </select>
           ) : fieldKey === 'minEducationLevel' ? (
             <select
               value={profileForm.minEducationLevel}
               onChange={(event) => setProfileForm((current) => ({ ...current, minEducationLevel: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
-              <option value="">Select...</option>
-              {['不限', '大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
+              <option value="">{locale === 'zh' ? '不限' : 'No preference'}</option>
+              {['大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           ) : fieldKey === 'hukouPreference' ? (
-            <input
+            <select
               value={profileForm.hukouPreference}
               onChange={(event) => setProfileForm((current) => ({ ...current, hukouPreference: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-              placeholder={locale === 'zh' ? 'e.g. 上海户口优先，不限亦可' : 'e.g. Shanghai hukou preferred, open to all'}
-            />
+            >
+              {HUKOU_PREFERENCE_OPTIONS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}
+            </select>
           ) : fieldKey === 'additionalPreferences' ? (
             <textarea
               value={profileForm.additionalPreferences}
               onChange={(event) => setProfileForm((current) => ({ ...current, additionalPreferences: event.target.value }))}
               className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-              placeholder={locale === 'zh' ? 'Any other preferences....' : 'Any other preferences....'}
+              placeholder={locale === 'zh' ? '补充其他要求，例如性格、生活方式、家庭观念等' : 'Add any other preferences such as personality, lifestyle, or family values'}
             />
           ) : fieldKey === 'about' || fieldKey === 'preferences' ? (
             <textarea
@@ -1391,11 +1686,7 @@ export default function MarketMvpApp() {
     const detailPendingConnection = getPendingOutgoingConnection(selectedProfile.id, connections);
     const detailRequested = detailConnectionState === 'pending';
     const detailConnected = detailConnectionState === 'connected';
-    const preferenceParts = selectedProfile.preferences
-      .split(/[·;；|]/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    const preferenceValue = (index: number) => preferenceParts[index] ?? (selectedProfile.preferences || '—');
+    const preferenceDetails = getPreferenceDetails(selectedProfile);
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
@@ -1404,7 +1695,8 @@ export default function MarketMvpApp() {
           <button onClick={() => setScreen('browse')} className="mb-6 inline-flex items-center gap-2 text-sm text-[#5A5248]">
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="space-y-6">
+            <SectionLabel title={locale === 'zh' ? '概要 · Summary' : 'Summary'} />
             <div className="space-y-4">
               <Card className="p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1461,18 +1753,8 @@ export default function MarketMvpApp() {
               </Card>
             </div>
 
+            <SectionLabel title={locale === 'zh' ? '详细资料 · In Detail' : 'In Detail'} />
             <div className="space-y-4">
-              <Card className="p-5">
-                <div className="text-[10px] font-mono text-[#B5272A] mb-1">档案编号 #2024-SH-001847</div>
-                <h2 className="font-serif text-[#1A1208] text-2xl font-semibold mb-1">{selectedProfile.gender}，{selectedProfile.age}岁，{selectedProfile.height}cm</h2>
-                <div className="flex flex-wrap gap-2">
-                  <Tag color="red">沪籍</Tag>
-                  <Tag color="green">{selectedProfile.property}</Tag>
-                  <Tag color="green">{selectedProfile.car}</Tag>
-                  {selectedProfile.traits.map((trait) => <Tag key={trait}>{trait}</Tag>)}
-                </div>
-              </Card>
-
               <Card className="p-5">
                 <SectionLabel title={locale === 'zh' ? '父母寄语' : "Parent's Note"} />
                 <p className="text-sm leading-8 text-[#3A3028] font-serif">{selectedProfile.about || '—'}</p>
@@ -1527,11 +1809,11 @@ export default function MarketMvpApp() {
                 </div>
                 <div className="divide-y divide-[#F0EBE1]">
                   {[
-                    [locale === 'zh' ? '期望年龄范围' : 'Preferred age range', preferenceValue(0)],
-                    [locale === 'zh' ? '期望身高范围' : 'Preferred height (cm)', preferenceValue(1)],
-                    [locale === 'zh' ? '最低学历要求' : 'Min. education level', preferenceValue(2)],
-                    [locale === 'zh' ? '户籍偏好' : 'Hukou preference', preferenceValue(3)],
-                    [locale === 'zh' ? '其他要求' : 'Additional preferences', preferenceValue(4)],
+                    [locale === 'zh' ? '期望年龄范围' : 'Preferred age range', preferenceDetails.preferredAgeRange || '—'],
+                    [locale === 'zh' ? '期望身高范围' : 'Preferred height (cm)', preferenceDetails.preferredHeightRange || '—'],
+                    [locale === 'zh' ? '最低学历要求' : 'Min. education level', preferenceDetails.minEducationLevel || '—'],
+                    [locale === 'zh' ? '户籍偏好' : 'Hukou preference', preferenceDetails.hukouPreference || '—'],
+                    [locale === 'zh' ? '其他要求' : 'Additional preferences', preferenceDetails.additionalPreferences || '—'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex px-5 py-2.5">
                       <span className="text-[11px] font-mono text-[#7A6E62] w-28 flex-shrink-0">{label}</span>
@@ -1701,7 +1983,7 @@ export default function MarketMvpApp() {
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Gender / 性别</div>
               <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                <option value="all">All</option>
+                <option value="all">{locale === 'zh' ? 'Any / 不限' : 'Any'}</option>
                 <option value="男">男</option>
                 <option value="女">女</option>
               </select>

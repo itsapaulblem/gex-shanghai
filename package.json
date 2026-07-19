@@ -6,7 +6,9 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "api": "node server/app.js"
+    "api": "node server/app.js",
+    "start": "node server/app.js",
+    "start:prod": "node server/app.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -50,6 +52,7 @@
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
     "next-themes": "0.4.6",
+    "nodemailer": "6.10.1",
     "react-day-picker": "8.10.1",
     "react-dnd": "16.0.1",
     "react-dnd-html5-backend": "16.0.1",

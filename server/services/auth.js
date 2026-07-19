@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { createId, getState, hashPassword, sanitizeUser, touchUserActivity, withState } from '../store.js';
+import { sendPasswordResetEmail } from './mailer.js';
 
 function verifyPassword(password, user) {
   const candidate = user.passwordSalt ? hashPassword(password, user.passwordSalt) : hashPassword(password);
@@ -28,6 +29,12 @@ function validateRegistration(email, password) {
     throw error;
   }
 
+  const normalizedPassword = validatePasswordStrength(password);
+
+  return { normalizedEmail, normalizedPassword };
+}
+
+function validatePasswordStrength(password) {
   const normalizedPassword = password.trim();
   if (normalizedPassword.length < 8 || !/[A-Z]/.test(normalizedPassword) || !/[^A-Za-z0-9]/.test(normalizedPassword)) {
     const error = new Error('PASSWORD_TOO_WEAK');
@@ -35,7 +42,7 @@ function validateRegistration(email, password) {
     throw error;
   }
 
-  return { normalizedEmail, normalizedPassword };
+  return normalizedPassword;
 }
 
 async function register({ email, password, language = 'zh' }) {
@@ -112,6 +119,100 @@ async function login({ email, password }) {
   });
 }
 
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function requestPasswordReset({ email, baseUrl }) {
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    const error = new Error('EMAIL_REQUIRED');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!normalizedEmail.includes('@')) {
+    const error = new Error('EMAIL_INVALID');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const fallbackBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:3001';
+  const origin = String(baseUrl ?? fallbackBaseUrl).replace(/\/$/, '');
+
+  return withState(async (state) => {
+    const user = state.users.find((candidate) => candidate.email === normalizedEmail) ?? null;
+
+    if (!user) {
+      return { ok: true };
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenRecord = {
+      id: createId('reset'),
+      userId: user.id,
+      tokenHash: hashResetToken(resetToken),
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    };
+
+    state.passwordResetTokens = state.passwordResetTokens.filter((candidate) => candidate.userId !== user.id);
+    state.passwordResetTokens.push(tokenRecord);
+
+    const resetLink = `${origin}/?resetToken=${encodeURIComponent(resetToken)}`;
+    await sendPasswordResetEmail(user.email, resetLink);
+
+    return { ok: true };
+  });
+}
+
+async function resetPassword({ token, password }) {
+  const normalizedToken = String(token ?? '').trim();
+  if (!normalizedToken) {
+    const error = new Error('RESET_TOKEN_REQUIRED');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedPassword = validatePasswordStrength(password);
+
+  return withState(async (state) => {
+    const tokenHash = hashResetToken(normalizedToken);
+    const tokenRecord = state.passwordResetTokens.find((candidate) => candidate.tokenHash === tokenHash) ?? null;
+
+    if (!tokenRecord) {
+      const error = new Error('RESET_TOKEN_INVALID');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (new Date(tokenRecord.expiresAt).getTime() <= Date.now()) {
+      state.passwordResetTokens = state.passwordResetTokens.filter((candidate) => candidate.id !== tokenRecord.id);
+      const error = new Error('RESET_TOKEN_EXPIRED');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const user = state.users.find((candidate) => candidate.id === tokenRecord.userId) ?? null;
+    if (!user) {
+      state.passwordResetTokens = state.passwordResetTokens.filter((candidate) => candidate.id !== tokenRecord.id);
+      const error = new Error('RESET_TOKEN_INVALID');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const passwordSalt = crypto.randomBytes(16).toString('hex');
+    user.passwordSalt = passwordSalt;
+    user.passwordHash = hashPassword(normalizedPassword, passwordSalt);
+    touchUserActivity(user.id);
+
+    state.sessions = state.sessions.filter((session) => session.userId !== user.id);
+    state.passwordResetTokens = state.passwordResetTokens.filter((candidate) => candidate.userId !== user.id);
+
+    return { ok: true };
+  });
+}
+
 async function resolveSession(token) {
   await withState(async () => undefined);
   const state = getState();
@@ -148,4 +249,4 @@ async function updateLanguage(userId, language) {
   });
 }
 
-export { login, register, resolveSession, updateLanguage };
+export { login, register, requestPasswordReset, resetPassword, resolveSession, updateLanguage };

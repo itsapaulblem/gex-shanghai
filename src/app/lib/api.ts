@@ -38,6 +38,11 @@ export interface ProfileRecord {
   traits: string[];
   hobbies: string;
   about: string;
+  preferredAgeRange?: string;
+  preferredHeightRange?: string;
+  minEducationLevel?: string;
+  hukouPreference?: string;
+  additionalPreferences?: string;
   preferences: string;
   createdAt: string;
 }
@@ -72,6 +77,10 @@ export interface SessionRecord {
   profile: ProfileRecord | null;
 }
 
+export interface RequestOkResponse {
+  ok: true;
+}
+
 async function requestJson<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
   const response = await fetch(path, {
     ...options,
@@ -95,6 +104,8 @@ async function requestJson<T>(path: string, options: RequestInit = {}, token?: s
 export const api = {
   register: (data: { email: string; password: string; language?: Locale }) => requestJson<SessionRecord>('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) => requestJson<SessionRecord>('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  requestPasswordReset: (data: { email: string }) => requestJson<RequestOkResponse>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
+  resetPassword: (data: { token: string; password: string }) => requestJson<RequestOkResponse>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
   me: (token: string) => requestJson<SessionRecord>('/api/me', {}, token),
   setLanguage: (token: string, language: Locale) => requestJson<{ user: UserRecord }>('/api/me/language', { method: 'PATCH', body: JSON.stringify({ language }) }, token),
   listProfiles: (token: string, filters?: Record<string, string>) => {

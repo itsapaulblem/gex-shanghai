@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { approveConnection, cancelConnection, listConnections, rejectConnection, requestConnection } from './services/connections.js';
 import { listMessages, sendMessage } from './services/chat.js';
-import { login, register, resolveSession, updateLanguage } from './services/auth.js';
+import { login, register, requestPasswordReset, resetPassword, resolveSession, updateLanguage } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
 import { loadState, touchUserActivity } from './store.js';
 
@@ -136,6 +136,10 @@ async function handleApi(request, response) {
       return;
     }
 
+    const forwardedProto = request.headers['x-forwarded-proto'];
+    const protocol = typeof forwardedProto === 'string' && forwardedProto ? forwardedProto.split(',')[0] : 'http';
+    const requestBaseUrl = process.env.APP_BASE_URL ?? `${protocol}://${request.headers.host}`;
+
     if (request.method === 'POST' && url.pathname === '/api/auth/register') {
       const body = await readBody(request);
       const result = await register(body);
@@ -146,6 +150,20 @@ async function handleApi(request, response) {
     if (request.method === 'POST' && url.pathname === '/api/auth/login') {
       const body = await readBody(request);
       const result = await login(body);
+      sendJson(response, 200, result);
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/auth/forgot-password') {
+      const body = await readBody(request);
+      const result = await requestPasswordReset({ ...body, baseUrl: requestBaseUrl });
+      sendJson(response, 200, result);
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/auth/reset-password') {
+      const body = await readBody(request);
+      const result = await resetPassword(body);
       sendJson(response, 200, result);
       return;
     }
