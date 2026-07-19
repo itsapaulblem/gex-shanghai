@@ -9,6 +9,7 @@ import {
   Globe2,
   Heart,
   LogIn,
+  Filter,
   MessageSquare,
   Search,
   Send,
@@ -48,6 +49,11 @@ type ProfileFormState = {
   car: string;
   traits: string;
   hobbies: string;
+  preferredAgeRange: string;
+  preferredHeightRange: string;
+  minEducationLevel: string;
+  hukouPreference: string;
+  additionalPreferences: string;
   about: string;
   preferences: string;
 };
@@ -109,7 +115,7 @@ const COPY: Record<Locale, Copy> = {
     outgoing: '我发出的申请',
     connected: '已连接',
     completeProfileNotice: '请填写完整子女资料，解锁浏览、申请与私聊功能。',
-    translationHint: '网站主语言为中文，右上角可切换为英文界面。',
+    translationHint: '网站主语言为中文，左上角可切换为英文界面。',
     searchPlaceholder: '搜索年龄、城市、行业、学校、户籍...',
     firstStepTitle: '先创建档案',
     firstStepDescription: '请填写完整子女资料，系统才会开放浏览、申请和私信功能。',
@@ -133,14 +139,14 @@ const COPY: Record<Locale, Copy> = {
     connections: 'Connections',
     chat: 'Private chat',
     signOut: 'Sign out',
-    requestConnect: 'Request connection',
+    requestConnect: 'Request to connect',
     pending: 'Pending',
     approved: 'Approved',
     incoming: 'Incoming requests',
     outgoing: 'Outgoing requests',
     connected: 'Connected',
     completeProfileNotice: 'Complete the child profile to unlock browsing, requests, and chat.',
-    translationHint: 'The site is Chinese-first, and you can switch the interface to English from the top right.',
+    translationHint: 'The site is Chinese-first, and you can switch the interface to English from the top left.',
     searchPlaceholder: 'Search by age, city, industry, school, hukou...',
     firstStepTitle: 'Create the profile first',
     firstStepDescription: 'Please complete the child profile to unlock browsing, requests, and chat.',
@@ -171,6 +177,11 @@ const defaultProfileForm: ProfileFormState = {
   car: '有车',
   traits: '',
   hobbies: '',
+  preferredAgeRange: '',
+  preferredHeightRange: '',
+  minEducationLevel: '',
+  hukouPreference: '',
+  additionalPreferences: '',
   about: '',
   preferences: '',
 };
@@ -189,7 +200,10 @@ const INCOME_OPTIONS = [
   '2-3万/月',
   '3-5万/月',
   '5-8万/月',
-  '8万/月以上',
+  '8-12万/月',
+  '12-15万/月',
+  '15-20万/月',
+  '20万/月以上',
 ];
 
 const AGE_RANGE_OPTIONS = [
@@ -208,7 +222,10 @@ const SALARY_RANGE_OPTIONS = [
   { label: '2-3万/月', value: '2-3万/月' },
   { label: '3-5万/月', value: '3-5万/月' },
   { label: '5-8万/月', value: '5-8万/月' },
-  { label: '8万/月以上', value: '8万/月以上' },
+  { label: '8-12万/月', value: '8-12万/月' },
+  { label: '12-15万/月', value: '12-15万/月' },
+  { label: '15-20万/月', value: '15-20万/月' },
+  { label: '20万/月以上', value: '20万/月以上' },
 ];
 
 const BIRTH_YEARS = Array.from({ length: 2026 - 1940 + 1 }, (_, index) => String(2026 - index));
@@ -222,7 +239,6 @@ const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
   'age',
   'height',
   'weight',
-  'city',
   'hukou',
   'hometown',
   'education',
@@ -235,9 +251,54 @@ const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
   'car',
   'traits',
   'hobbies',
-  'about',
-  'preferences',
+  'preferredAgeRange',
 ];
+
+const PROFILE_SETUP_STEPS: { title: { zh: string; en: string }; fields: (keyof ProfileFormState)[] }[] = [
+  {
+    title: { zh: '基本信息', en: 'Basic info' },
+    fields: ['honorific', 'surname', 'childAlias', 'gender', 'birthYear', 'age', 'height', 'weight', 'hukou', 'hometown'],
+  },
+  {
+    title: { zh: '学历与职业', en: 'Education & career' },
+    fields: ['education', 'school', 'major', 'industry', 'jobTitle', 'income', 'property', 'car'],
+  },
+  {
+    title: { zh: '个人描述', en: 'Profile story' },
+    fields: ['traits', 'hobbies', 'preferredAgeRange', 'preferredHeightRange', 'minEducationLevel', 'hukouPreference', 'additionalPreferences'],
+  },
+];
+
+const PROFILE_FIELD_LABELS: Record<keyof ProfileFormState, { zh: string; en: string }> = {
+  honorific: { zh: '称呼', en: 'Title' },
+  surname: { zh: '姓氏', en: 'Surname' },
+  childAlias: { zh: '子女称呼', en: 'Alias' },
+  gender: { zh: '性别', en: 'Gender' },
+  birthYear: { zh: '出生年份', en: 'Birth year' },
+  age: { zh: '年龄', en: 'Age' },
+  height: { zh: '身高', en: 'Height' },
+  weight: { zh: '体重', en: 'Weight' },
+  city: { zh: '现居城市', en: 'City' },
+  hukou: { zh: '户籍', en: 'Hukou' },
+  hometown: { zh: '老家', en: 'Hometown' },
+  education: { zh: '最高学历', en: 'Highest education' },
+  school: { zh: '大学 / 学校', en: 'University / School' },
+  major: { zh: '所学专业', en: 'Major / Field of Study' },
+  industry: { zh: '行业', en: 'Industry' },
+  jobTitle: { zh: '职业', en: 'Job title' },
+  income: { zh: '月收入', en: 'Monthly income' },
+  property: { zh: '房产', en: 'Property' },
+  car: { zh: '车辆', en: 'Car' },
+  traits: { zh: '孩子性格描述', en: 'Personality (written by parent)' },
+  hobbies: { zh: '兴趣爱好', en: 'Hobbies & Interests' },
+  preferredAgeRange: { zh: '期望年龄范围', en: 'Preferred Age Range' },
+  preferredHeightRange: { zh: '期望身高范围', en: 'Preferred Height (cm)' },
+  minEducationLevel: { zh: '最低学历要求', en: 'Min. Education Level' },
+  hukouPreference: { zh: '户籍偏好', en: 'Hukou Preference' },
+  additionalPreferences: { zh: '其他要求', en: 'Additional Preferences' },
+  about: { zh: '简介', en: 'About' },
+  preferences: { zh: '择偶要求', en: 'Preferences' },
+};
 
 function getInitialLocale(): Locale {
   const stored = window.localStorage.getItem('gex-locale');
@@ -246,6 +307,13 @@ function getInitialLocale(): Locale {
 
 function getInitialToken() {
   return window.localStorage.getItem('gex-token');
+}
+
+function getPendingOutgoingConnection(
+  profileId: string,
+  connections: { ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null,
+) {
+  return connections?.outgoing.find((connection) => connection.targetProfileId === profileId && connection.status === 'pending') ?? null;
 }
 
 function badgeClass(type: 'default' | 'red' | 'green' | 'gold' | 'yellow' = 'default') {
@@ -365,6 +433,8 @@ export default function MarketMvpApp() {
   const [authPasswordVisible, setAuthPasswordVisible] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [profileBusy, setProfileBusy] = useState(false);
+  const [setupStep, setSetupStep] = useState(1);
+  const [browsePage, setBrowsePage] = useState(1);
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ProfileRecord | null>(null);
   const [connections, setConnections] = useState<{ ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null>(null);
@@ -428,6 +498,11 @@ export default function MarketMvpApp() {
       car: profile?.car ?? '有车',
       traits: profile?.traits?.join(', ') ?? '',
       hobbies: profile?.hobbies ?? '',
+      preferredAgeRange: '',
+      preferredHeightRange: '',
+      minEducationLevel: '',
+      hukouPreference: '',
+      additionalPreferences: '',
       about: profile?.about ?? '',
       preferences: profile?.preferences ?? '',
     });
@@ -455,6 +530,7 @@ export default function MarketMvpApp() {
         await refreshConnections(activeToken);
       } else {
         populateProfileForm(null);
+        setSetupStep(1);
         setScreen('setup');
       }
     } finally {
@@ -556,6 +632,14 @@ export default function MarketMvpApp() {
         height: Number(profileForm.height),
         weight: Number(profileForm.weight),
         traits: toTraits(profileForm.traits),
+        about: profileForm.traits,
+        preferences: [
+          profileForm.preferredAgeRange,
+          profileForm.preferredHeightRange,
+          profileForm.minEducationLevel,
+          profileForm.hukouPreference,
+          profileForm.additionalPreferences,
+        ].filter(Boolean).join(' · '),
       };
       if (ownProfile) {
         await api.updateOwnProfile(token, payload);
@@ -687,11 +771,13 @@ export default function MarketMvpApp() {
     if (!ownProfile) {
       showNotice(locale === 'zh' ? '请先创建个人档案。' : 'Please create a profile first.');
       populateProfileForm(null);
+      setSetupStep(1);
       setScreen('setup');
       return;
     }
 
     populateProfileForm(ownProfile);
+    setSetupStep(1);
     setScreen('setup');
   }
 
@@ -801,6 +887,11 @@ export default function MarketMvpApp() {
     });
     return sortProfiles(filtered, filters.sort);
   }, [filters.ageRange, filters.gender, filters.salaryRange, filters.search, filters.sort, profiles]);
+
+  const browsableProfiles = filteredProfiles.filter((profile) => !ownProfile || profile.id !== ownProfile.id);
+  const browsePageCount = Math.max(1, Math.ceil(browsableProfiles.length / 6));
+  const activeBrowsePage = Math.min(browsePage, browsePageCount);
+  const pagedBrowseProfiles = browsableProfiles.slice((activeBrowsePage - 1) * 6, activeBrowsePage * 6);
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center bg-[#F7F4EF] text-[#5A5248]">Loading...</div>;
@@ -922,7 +1013,7 @@ export default function MarketMvpApp() {
                 <button
                   onClick={submitAuth}
                   disabled={authBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#A87C1A] px-4 py-3 text-base font-medium text-white disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#2C8A4A] px-4 py-3 text-base font-medium text-white hover:bg-[#247A40] disabled:opacity-60"
                 >
                   <LogIn size={16} /> {copy.signIn}
                 </button>
@@ -936,6 +1027,148 @@ export default function MarketMvpApp() {
   }
 
   if (screen === 'setup') {
+    const currentSetupStep = PROFILE_SETUP_STEPS[setupStep - 1];
+    const totalSetupSteps = PROFILE_SETUP_STEPS.length;
+
+    function renderProfileField(fieldKey: keyof ProfileFormState) {
+      const fieldLabel = PROFILE_FIELD_LABELS[fieldKey];
+      const isWideField = fieldKey === 'gender' || fieldKey === 'traits' || fieldKey === 'hobbies' || fieldKey === 'preferredAgeRange' || fieldKey === 'preferredHeightRange' || fieldKey === 'hukouPreference' || fieldKey === 'additionalPreferences';
+      const labelText = locale === 'zh' ? `${fieldLabel.zh} / ${fieldLabel.en}` : `${fieldLabel.en} / ${fieldLabel.zh}`;
+      const required = REQUIRED_PROFILE_FIELDS.includes(fieldKey);
+
+      return (
+        <label key={fieldKey} className={`block ${isWideField ? 'md:col-span-2' : ''}`}>
+          <div className="mb-1 text-[11px] font-medium text-[#1A1208]">
+            {labelText}{required ? ' *' : ''}
+          </div>
+          {fieldKey === 'gender' ? (
+            <div className="flex gap-3">
+              {['男', '女'].map((gender) => (
+                <button
+                  key={gender}
+                  onClick={() => setProfileForm((current) => ({ ...current, gender: gender as '男' | '女' }))}
+                  className={`rounded-full border px-4 py-2 text-sm ${profileForm.gender === gender ? 'border-[#A87C1A] bg-[#FEF0F0] text-[#A87C1A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+                >
+                  {gender} / {gender === '男' ? 'Male' : 'Female'}
+                </button>
+              ))}
+            </div>
+          ) : fieldKey === 'birthYear' ? (
+            <select
+              value={profileForm.birthYear}
+              onChange={(event) => setProfileForm((current) => ({ ...current, birthYear: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {BIRTH_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
+            </select>
+          ) : fieldKey === 'honorific' ? (
+            <select
+              value={profileForm.honorific}
+              onChange={(event) => setProfileForm((current) => ({ ...current, honorific: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {HONORIFIC_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          ) : fieldKey === 'income' ? (
+            <select
+              value={profileForm.income}
+              onChange={(event) => setProfileForm((current) => ({ ...current, income: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {INCOME_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          ) : fieldKey === 'property' ? (
+            <select
+              value={profileForm.property}
+              onChange={(event) => setProfileForm((current) => ({ ...current, property: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {['有房', '无房'].map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          ) : fieldKey === 'car' ? (
+            <select
+              value={profileForm.car}
+              onChange={(event) => setProfileForm((current) => ({ ...current, car: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {['有车', '无车'].map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          ) : fieldKey === 'preferredAgeRange' ? (
+            <input
+              value={profileForm.preferredAgeRange}
+              onChange={(event) => setProfileForm((current) => ({ ...current, preferredAgeRange: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'e.g. 28–35岁' : 'e.g. 28-35'}
+            />
+          ) : fieldKey === 'preferredHeightRange' ? (
+            <input
+              value={profileForm.preferredHeightRange}
+              onChange={(event) => setProfileForm((current) => ({ ...current, preferredHeightRange: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'e.g. 170cm以上' : 'e.g. 170cm or taller'}
+            />
+          ) : fieldKey === 'minEducationLevel' ? (
+            <select
+              value={profileForm.minEducationLevel}
+              onChange={(event) => setProfileForm((current) => ({ ...current, minEducationLevel: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              <option value="">Select...</option>
+              {['不限', '大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          ) : fieldKey === 'hukouPreference' ? (
+            <input
+              value={profileForm.hukouPreference}
+              onChange={(event) => setProfileForm((current) => ({ ...current, hukouPreference: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'e.g. 上海户口优先，不限亦可' : 'e.g. Shanghai hukou preferred, open to all'}
+            />
+          ) : fieldKey === 'additionalPreferences' ? (
+            <textarea
+              value={profileForm.additionalPreferences}
+              onChange={(event) => setProfileForm((current) => ({ ...current, additionalPreferences: event.target.value }))}
+              className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'Any other preferences....' : 'Any other preferences....'}
+            />
+          ) : fieldKey === 'about' || fieldKey === 'preferences' ? (
+            <textarea
+              value={profileForm[fieldKey]}
+              onChange={(event) => setProfileForm((current) => ({ ...current, [fieldKey]: event.target.value }))}
+              className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={fieldKey === 'about'
+                ? (locale === 'zh' ? '填写孩子的整体介绍' : 'Share a short introduction')
+                : (locale === 'zh' ? '填写对另一半的期待' : 'State partner preferences')}
+            />
+          ) : fieldKey === 'traits' ? (
+            <textarea
+              value={profileForm.traits}
+              onChange={(event) => setProfileForm((current) => ({ ...current, traits: event.target.value }))}
+              className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'e.g. 性格开朗活泼，孝顺，工作认真负责，喜欢烹饪和旅游...' : 'e.g. cheerful, filial, responsible, likes cooking and travel...'}
+            />
+          ) : fieldKey === 'hobbies' ? (
+            <input
+              value={profileForm.hobbies}
+              onChange={(event) => setProfileForm((current) => ({ ...current, hobbies: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={locale === 'zh' ? 'e.g. 摄影、爬山、读书、烘焙' : 'e.g. photography, hiking, reading, baking'}
+            />
+          ) : (
+            <input
+              value={profileForm[fieldKey] as string}
+              onChange={(event) => setProfileForm((current) => ({ ...current, [fieldKey]: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={fieldKey === 'surname'
+                ? (locale === 'zh' ? '例如：王' : 'e.g. Wang')
+                : fieldKey === 'childAlias'
+                  ? (locale === 'zh' ? '例如：晨晨' : 'e.g. Chenchen')
+                  : ''}
+            />
+          )}
+        </label>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
         <AppHeader
@@ -953,163 +1186,69 @@ export default function MarketMvpApp() {
           </button>
           <SectionLabel title={ownProfile ? copy.myProfile : copy.profileSetup} />
           <div className="grid gap-6">
-            <Card className="p-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '称呼' : 'Title'} *</div>
-                  <select
-                    value={profileForm.honorific}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, honorific: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                  >
-                    {HONORIFIC_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </label>
-                <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '姓氏' : 'Surname'} *</div>
-                  <input
-                    value={profileForm.surname}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, surname: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '例如：王' : 'e.g. Wang'}
-                  />
-                </label>
-                <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '子女称呼' : 'Alias'} *</div>
-                  <input
-                    value={profileForm.childAlias}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, childAlias: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '例如：晨晨' : 'e.g. Chenchen'}
-                  />
-                </label>
-                <label className="block">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '出生年份' : 'Birth year'} *</div>
-                  <select
-                    value={profileForm.birthYear}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, birthYear: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                  >
-                    {BIRTH_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
-                  </select>
-                </label>
-                {Object.entries({
-                  age: '年龄 / Age',
-                  height: '身高 / Height',
-                  weight: '体重 / Weight',
-                  city: '现居城市 / City',
-                  hukou: '户籍 / Hukou',
-                  hometown: '老家 / Hometown',
-                  education: '学历 / Education',
-                  school: '学校 / School',
-                  major: '专业 / Major',
-                  industry: '行业 / Industry',
-                  jobTitle: '职业 / Job title',
-                  income: '收入 / Income',
-                  property: '房产 / Property',
-                  car: '车辆 / Car',
-                }).map(([key, label]) => (
-                  <label key={key} className="block">
-                    <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{label} *</div>
-                    {key === 'income' ? (
-                      <select
-                        value={profileForm.income}
-                        onChange={(event) => setProfileForm((current) => ({ ...current, income: event.target.value }))}
-                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                      >
-                        {INCOME_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    ) : key === 'property' ? (
-                      <select
-                        value={profileForm.property}
-                        onChange={(event) => setProfileForm((current) => ({ ...current, property: event.target.value }))}
-                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                      >
-                        {['有房', '无房'].map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    ) : key === 'car' ? (
-                      <select
-                        value={profileForm.car}
-                        onChange={(event) => setProfileForm((current) => ({ ...current, car: event.target.value }))}
-                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                      >
-                        {['有车', '无车'].map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        value={profileForm[key as keyof ProfileFormState] as string}
-                        onChange={(event) => setProfileForm((current) => ({ ...current, [key]: event.target.value }))}
-                        className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                      />
-                    )}
-                  </label>
-                ))}
-
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Gender / 性别 *</div>
-                  <div className="flex gap-3">
-                    {['男', '女'].map((gender) => (
-                      <button
-                        key={gender}
-                        onClick={() => setProfileForm((current) => ({ ...current, gender: gender as '男' | '女' }))}
-                        className={`rounded-full border px-4 py-2 text-sm ${profileForm.gender === gender ? 'border-[#A87C1A] bg-[#FEF0F0] text-[#A87C1A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
-                      >
-                        {gender}
-                      </button>
+            <Card className="overflow-hidden border-[#D8D0C4] bg-[#FAFAF8]">
+              <div className="border-b border-[#EEE9E0] px-6 py-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? currentSetupStep.title.zh : currentSetupStep.title.en}</div>
+                    <div className="mt-0.5 text-xs font-mono text-[#7A6E62]">
+                      {locale === 'zh'
+                        ? `第 ${setupStep} 步 / 共 ${totalSetupSteps} 步`
+                        : `Step ${setupStep} of ${totalSetupSteps}`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {PROFILE_SETUP_STEPS.map((stepItem, index) => (
+                      <div key={stepItem.title.en} className="flex items-center gap-2">
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold ${index + 1 <= setupStep ? 'bg-[#B5272A] text-white' : 'border border-[#D8D0C4] bg-white text-[#7A6E62]'}`}>
+                          {index + 1}
+                        </div>
+                        {index < PROFILE_SETUP_STEPS.length - 1 ? <div className={`h-px w-10 ${index + 1 <= setupStep ? 'bg-[#B5272A]' : 'bg-[#D8D0C4]'}`} /> : null}
+                      </div>
                     ))}
                   </div>
-                </label>
-
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">About / 简介 *</div>
-                  <textarea
-                    value={profileForm.about}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, about: event.target.value }))}
-                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '填写孩子的整体介绍' : 'Share a short introduction'}
-                  />
-                </label>
-
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Traits / 性格标签 *</div>
-                  <input
-                    value={profileForm.traits}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, traits: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '例如：踏实, 孝顺, 爱运动' : 'For example: steady, kind, active'}
-                  />
-                  <div className="mt-1 text-[10px] font-mono text-[#8A8070]">{locale === 'zh' ? '建议标签只作提示，不会自动填入。' : 'Suggested tags are only hints and will not auto-fill.'}</div>
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Hobbies / 爱好 *</div>
-                  <input
-                    value={profileForm.hobbies}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, hobbies: event.target.value }))}
-                    className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '例如：摄影、爬山、读书' : 'For example: photography, hiking, reading'}
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="mb-1 text-[11px] font-medium text-[#1A1208]">Preferences / 择偶要求 *</div>
-                  <textarea
-                    value={profileForm.preferences}
-                    onChange={(event) => setProfileForm((current) => ({ ...current, preferences: event.target.value }))}
-                    className="min-h-24 w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-                    placeholder={locale === 'zh' ? '填写对另一半的期待' : 'State partner preferences'}
-                  />
-                </label>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {PROFILE_SETUP_STEPS.map((stepItem, index) => (
+                    <div key={stepItem.title.en} className={`rounded-lg border px-3 py-2 text-xs ${index + 1 === setupStep ? 'border-[#E8D49A] bg-[#FFF9E8] text-[#1A1208]' : 'border-[#EEE9E0] bg-white text-[#7A6E62]'}`}>
+                      <div className="font-medium">{locale === 'zh' ? stepItem.title.zh : stepItem.title.en}</div>
+                      <div className="mt-0.5 font-mono text-[10px]">{locale === 'zh' ? stepItem.title.en : stepItem.title.zh}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={submitProfile}
-                  disabled={profileBusy}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#A87C1A] px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  <CheckCircle2 size={16} /> {ownProfile ? (locale === 'zh' ? '保存修改' : 'Save changes') : (locale === 'zh' ? '提交档案' : 'Submit profile')}
-                </button>
+
+              <div className="px-6 py-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {currentSetupStep.fields.map((fieldKey) => renderProfileField(fieldKey))}
+                </div>
+                <div className="mt-6 flex items-center justify-between gap-3">
+                  <button
+                    onClick={() => setSetupStep((current) => Math.max(1, current - 1))}
+                    disabled={setupStep === 1}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] disabled:opacity-40"
+                  >
+                    <ArrowLeft size={16} /> {locale === 'zh' ? '上一步' : 'Previous step'}
+                  </button>
+                  {setupStep < totalSetupSteps ? (
+                    <button
+                      onClick={() => setSetupStep((current) => Math.min(totalSetupSteps, current + 1))}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224]"
+                    >
+                      {locale === 'zh' ? '下一步' : 'Next step'} <ChevronRight size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={submitProfile}
+                      disabled={profileBusy}
+                      className="inline-flex items-center gap-2 rounded-lg bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] disabled:opacity-60"
+                    >
+                      <CheckCircle2 size={16} /> {ownProfile ? (locale === 'zh' ? '保存修改' : 'Save changes') : (locale === 'zh' ? '提交档案' : 'Submit profile')}
+                    </button>
+                  )}
+                </div>
               </div>
             </Card>
-
           </div>
         </div>
         {notice ? <Toast notice={notice} /> : null}
@@ -1119,6 +1258,7 @@ export default function MarketMvpApp() {
 
   if (screen === 'detail' && selectedProfile) {
     const detailConnectionState = getProfileConnectionState(selectedProfile.id, connections);
+    const detailPendingConnection = getPendingOutgoingConnection(selectedProfile.id, connections);
     const detailRequested = detailConnectionState === 'pending';
     const detailConnected = detailConnectionState === 'connected';
 
@@ -1150,12 +1290,23 @@ export default function MarketMvpApp() {
               </div>
               <div className="mt-6 space-y-3">
                 <button
-                  onClick={() => { if (!detailRequested && !detailConnected) { void requestConnect(selectedProfile.id); } }}
-                  disabled={detailRequested || detailConnected}
-                  className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailRequested ? 'bg-[#FFF2C7] text-[#8A6500]' : detailConnected ? 'bg-[#2C8A4A] text-white' : 'bg-[#A87C1A] text-white'}`}
+                  onClick={() => {
+                    if (detailConnected) {
+                      return;
+                    }
+
+                    if (detailPendingConnection) {
+                      void cancelRequest(detailPendingConnection.id);
+                      return;
+                    }
+
+                    void requestConnect(selectedProfile.id);
+                  }}
+                  disabled={detailConnected}
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailConnected ? 'bg-[#2C8A4A] text-white' : detailRequested ? 'bg-[#FFF5F5] text-[#B91C1C] border border-[#F5C4C5]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
                 >
-                  {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <UserCheck size={16} /> : <Heart size={16} />}
-                  {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '已发送' : 'Requested') : copy.requestConnect}
+                  {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
+                  {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
                 </button>
                 <button onClick={() => setScreen('connections')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
                   <Users size={16} /> {copy.myConnections}
@@ -1328,62 +1479,83 @@ export default function MarketMvpApp() {
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
       <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_180px_180px_180px_160px_160px]">
-          <label className="block lg:col-span-1">
-            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '搜索' : 'Search'}</div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8070]" size={16} />
-              <input
-                value={filters.search}
-                onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-                placeholder={copy.searchPlaceholder}
-                className="w-full rounded-xl border border-[#D8D0C4] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#A87C1A]"
-              />
-            </div>
-          </label>
-          <label className="block">
-            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '性别' : 'Gender'}</div>
-            <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]">
-              <option value="all">All</option>
-              <option value="男">男</option>
-              <option value="女">女</option>
-            </select>
-          </label>
-          <label className="block">
-            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '年龄范围' : 'Age range'}</div>
-            <select
-              value={filters.ageRange}
-              onChange={(event) => setFilters((current) => ({ ...current, ageRange: event.target.value }))}
-              className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-            >
-              {AGE_RANGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '薪资范围' : 'Salary range'}</div>
-            <select
-              value={filters.salaryRange}
-              onChange={(event) => setFilters((current) => ({ ...current, salaryRange: event.target.value }))}
-              className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
-            >
-              {SALARY_RANGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <div className="mb-1 text-[11px] font-medium text-[#1A1208]">{locale === 'zh' ? '排序' : 'Sort'}</div>
-            <select value={filters.sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as SortMode }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#A87C1A]">
-              <option value="latest">Latest</option>
-              <option value="age-asc">Age asc</option>
-              <option value="age-desc">Age desc</option>
-              <option value="height">Height</option>
-            </select>
-          </label>
-          <div className="flex items-end gap-2">
-            <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#A87C1A] px-4 py-3 text-sm font-medium text-white">
+        <div className="mb-6 rounded-[1.5rem] border border-[#D8D0C4] bg-[#FAF3E8]/90 p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2">
+            <Filter size={13} className="text-[#5A5248]" />
+            <span className="text-xs font-semibold text-[#1A1208]">筛选条件</span>
+            <span className="text-[10px] font-mono text-[#8A8070]">Filter</span>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-6">
+            <label className="block lg:col-span-2">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Search</div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A8070]" size={16} />
+                <input
+                  value={filters.search}
+                  onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+                  placeholder={copy.searchPlaceholder}
+                  className="w-full rounded-xl border border-[#D8D0C4] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#B5272A]"
+                />
+              </div>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Gender / 性别</div>
+              <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                <option value="all">All</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Age Range / 年龄范围</div>
+              <select value={filters.ageRange} onChange={(event) => setFilters((current) => ({ ...current, ageRange: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                {AGE_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Height / 身高</div>
+              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                <option value="">Select...</option>
+                <option>160+</option>
+                <option>165+</option>
+                <option>170+</option>
+                <option>175+</option>
+                <option>180+</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Min. Education / 最低学历</div>
+              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                <option value="">Select...</option>
+                <option>大专</option>
+                <option>本科</option>
+                <option>硕士</option>
+                <option>博士</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">City / 城市</div>
+              <select defaultValue="" onChange={() => undefined} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
+                <option value="">Select...</option>
+                <option>上海</option>
+                <option>北京</option>
+                <option>杭州</option>
+                <option>深圳</option>
+              </select>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Income / 月收入</div>
+              <select
+                value={filters.salaryRange}
+                onChange={(event) => setFilters((current) => ({ ...current, salaryRange: event.target.value }))}
+                className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
+              >
+                {SALARY_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] transition-colors">
               <Search size={16} /> {locale === 'zh' ? '搜索' : 'Search'}
             </button>
           </div>
@@ -1402,8 +1574,9 @@ export default function MarketMvpApp() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredProfiles.filter((profile) => !ownProfile || profile.id !== ownProfile.id).map((profile) => {
+          {pagedBrowseProfiles.map((profile) => {
             const connectionState = getProfileConnectionState(profile.id, connections);
+            const pendingConnection = getPendingOutgoingConnection(profile.id, connections);
             const isPending = connectionState === 'pending';
             const isConnected = connectionState === 'connected';
 
@@ -1430,18 +1603,48 @@ export default function MarketMvpApp() {
                       {locale === 'zh' ? '查看详情' : 'View detail'}
                     </button>
                     <button
-                      onClick={() => { if (!isPending && !isConnected) { void requestConnect(profile.id); } }}
-                      disabled={isPending || isConnected}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isPending ? 'bg-[#FFF2C7] text-[#8A6500]' : isConnected ? 'bg-[#2C8A4A] text-white' : 'bg-[#A87C1A] text-white'}`}
+                      onClick={() => {
+                        if (isConnected) {
+                          return;
+                        }
+
+                        if (pendingConnection) {
+                          void cancelRequest(pendingConnection.id);
+                          return;
+                        }
+
+                        void requestConnect(profile.id);
+                      }}
+                      disabled={isConnected}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#2C8A4A] text-white' : isPending ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
                     >
-                      {isConnected ? <CheckCircle2 size={16} /> : isPending ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                      {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '已发送' : 'Requested') : ''}
+                      {isConnected ? <CheckCircle2 size={16} /> : isPending ? <X size={16} /> : <UserPlus size={16} />}
+                      {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
                     </button>
                   </div>
                 </div>
               </Card>
             );
           })}
+        </div>
+
+        <div className="mt-8 flex items-center justify-center gap-2">
+          {[1, 2, 3].map((pageNumber) => (
+            <button
+              key={pageNumber}
+              onClick={() => setBrowsePage(pageNumber)}
+              className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === pageNumber ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+            >
+              {pageNumber}
+            </button>
+          ))}
+          <span className="px-1 text-[#8A8070]">...</span>
+          <button
+            onClick={() => setBrowsePage(12)}
+            className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === 12 ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+          >
+            12
+          </button>
         </div>
       </div>
       {notice ? <Toast notice={notice} /> : null}
