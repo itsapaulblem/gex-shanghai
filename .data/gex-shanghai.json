@@ -71,7 +71,7 @@
       "passwordHash": "9e47974c45768a2bdacef8f3358c6df46f9987bd0701b04f7103e07c01da599b",
       "createdAt": "2026-07-18T05:22:25.024Z",
       "language": "en",
-      "lastSeenAt": "2026-07-19T01:46:41.521Z"
+      "lastSeenAt": "2026-07-19T09:32:58.837Z"
     },
     {
       "id": "user_8d82b945",
@@ -117,6 +117,15 @@
       "createdAt": "2026-07-19T01:35:38.483Z",
       "language": "en",
       "lastSeenAt": "2026-07-19T01:35:58.577Z"
+    },
+    {
+      "id": "user_8a1111f1",
+      "email": "paulcheng1ss51@gmail.com",
+      "passwordSalt": "c7c67afb5c9be0ceb432c69ecb64f8a7",
+      "passwordHash": "c4cac1de2c74547b272107879ebfb6ed38978aba7eb661ed739f0c85c93862fb",
+      "createdAt": "2026-07-19T09:28:40.269Z",
+      "language": "en",
+      "lastSeenAt": "2026-07-19T09:29:23.994Z"
     }
   ],
   "sessions": [
@@ -159,6 +168,11 @@
       "token": "8bb4f533-b8ef-4cfa-8dbb-db79ede2893b",
       "userId": "user_bf1c8b73",
       "createdAt": "2026-07-19T01:35:38.483Z"
+    },
+    {
+      "token": "7e2056f4-a325-4550-8106-0951715a1e6d",
+      "userId": "user_8a1111f1",
+      "createdAt": "2026-07-19T09:28:40.269Z"
     }
   ],
   "profiles": [
@@ -432,7 +446,12 @@
       "hobbies": "sd",
       "about": "xdvds",
       "preferences": "ssds",
-      "createdAt": "2026-07-18T05:25:32.890Z"
+      "createdAt": "2026-07-18T05:25:32.890Z",
+      "preferredAgeRange": "ssds",
+      "preferredHeightRange": "",
+      "minEducationLevel": "",
+      "hukouPreference": "",
+      "additionalPreferences": ""
     },
     {
       "id": "profile_b2ba7c9a",

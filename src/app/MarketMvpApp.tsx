@@ -454,7 +454,7 @@ const PROFILE_SETUP_STEPS: { title: { zh: string; en: string }; fields: (keyof P
   },
   {
     title: { zh: '个人描述', en: 'Profile story' },
-    fields: ['traits', 'hobbies', 'about', 'preferredAgeRange', 'preferredHeightRange', 'minEducationLevel', 'hukouPreference', 'additionalPreferences'],
+    fields: ['traits', 'hobbies', 'preferredAgeRange', 'preferredHeightRange', 'minEducationLevel', 'hukouPreference', 'additionalPreferences', 'about'],
   },
 ];
 
@@ -485,7 +485,7 @@ const PROFILE_FIELD_LABELS: Record<keyof ProfileFormState, { zh: string; en: str
   minEducationLevel: { zh: '最低学历要求', en: 'Min. Education Level' },
   hukouPreference: { zh: '户籍偏好', en: 'Hukou Preference' },
   additionalPreferences: { zh: '其他要求', en: 'Additional Preferences' },
-  about: { zh: '简介', en: 'About' },
+  about: { zh: '父母寄语', en: 'Parent note' },
   preferences: { zh: '择偶要求', en: 'Preferences' },
 };
 
@@ -1899,8 +1899,10 @@ export default function MarketMvpApp() {
               <div className="space-y-4">
                 <div className="rounded-2xl border border-[#D8D0C4] bg-[#FAFAF8] p-4">
                   <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '对方档案' : 'Profile'}</div>
-                  <div className="mt-1 text-xl font-semibold">{otherProfile.gender}</div>
-                  <div className="mt-2 text-[10px] font-mono text-[#8A8070]">No photo · 隐私保护</div>
+                  <div className="mt-1 flex items-end gap-2">
+                    <div className="text-xl font-semibold">{otherProfile.gender}</div>
+                    <div className="text-2xl font-semibold text-[#1A1208]">{otherProfile.childAlias || '—'}</div>
+                  </div>
                   <div className="mt-4 divide-y divide-[#EEE9E0] overflow-hidden rounded-2xl border border-[#D8D0C4] bg-white">
                     {[
                       [locale === 'zh' ? '年龄' : 'Age', `${otherProfile.age}岁`],
@@ -2174,8 +2176,8 @@ function Toast({ notice }: { notice: { message: string; tone: 'error' | 'success
     : 'border-[#F5B6B6] bg-[#B91C1C] text-white';
 
   return (
-    <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-2xl border px-5 py-3 text-sm shadow-xl transition-all duration-300 ease-out animate-in slide-in-from-top-2">
-      <div className={`rounded-xl px-4 py-2 ${toneClasses}`}>
+    <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 text-sm transition-all duration-300 ease-out animate-in slide-in-from-top-2">
+      <div className={`rounded-xl border px-4 py-2 shadow-xl ${toneClasses}`}>
         {notice.message}
       </div>
     </div>
