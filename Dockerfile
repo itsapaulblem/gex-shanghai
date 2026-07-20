@@ -1,12 +1,3 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
@@ -16,7 +7,7 @@ ENV PORT=8080
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-COPY --from=build /app/dist ./dist
+COPY dist ./dist
 COPY server ./server
 
 EXPOSE 8080

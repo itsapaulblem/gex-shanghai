@@ -6,7 +6,6 @@ pnpm-debug.log*
 .git
 .gitignore
 .data
-dist
 Shanghainese Marriage Market Website
 .DS_Store
 *.local

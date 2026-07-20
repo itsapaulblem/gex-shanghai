@@ -752,6 +752,32 @@ export default function MarketMvpApp() {
   const copy = COPY[locale];
   const ownProfile = session?.profile ?? null;
 
+  function requireChildProfile(targetScreen: 'browse' | 'connections') {
+    if (ownProfile) {
+      return true;
+    }
+
+    showNotice(copy.completeProfileNotice);
+    setScreen('setup');
+    return false;
+  }
+
+  function goToBrowse() {
+    if (!requireChildProfile('browse')) {
+      return;
+    }
+
+    setScreen('browse');
+  }
+
+  function goToConnections() {
+    if (!requireChildProfile('connections')) {
+      return;
+    }
+
+    setScreen('connections');
+  }
+
   function showNotice(message: string, tone: 'error' | 'success' = 'error') {
     setNotice({ message, tone });
     window.setTimeout(() => setNotice((current) => (current?.message === message ? null : current)), 2800);
@@ -1028,6 +1054,14 @@ export default function MarketMvpApp() {
     void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
     setChatTypingActive(false);
   }, [screen, token, chat?.connection.id, chatTypingActive]);
+
+  useEffect(() => {
+    if (!token || ownProfile || (screen !== 'browse' && screen !== 'connections' && screen !== 'detail' && screen !== 'chat')) {
+      return;
+    }
+
+    setScreen('setup');
+  }, [ownProfile, screen, token]);
 
   async function submitAuth() {
     try {
@@ -2009,13 +2043,13 @@ export default function MarketMvpApp() {
           locale={locale}
           onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
           onSignOut={signOut}
-          onLogoClick={() => setScreen('browse')}
+          onLogoClick={goToBrowse}
           onProfileClick={openOwnProfilePage}
-          onConnectionsClick={() => setScreen('connections')}
+          onConnectionsClick={goToConnections}
           currentScreen={copy.profileSetup}
         />
         <div className="mx-auto max-w-5xl px-6 py-8">
-          <button onClick={() => setScreen('browse')} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+          <button onClick={goToBrowse} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
           <SectionLabel title={ownProfile ? copy.myProfile : copy.profileSetup} />
@@ -2099,9 +2133,9 @@ export default function MarketMvpApp() {
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={goToBrowse} onProfileClick={openOwnProfilePage} onConnectionsClick={goToConnections} currentScreen={copy.browse} />
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <button onClick={() => setScreen('browse')} className="mb-6 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+          <button onClick={goToBrowse} className="mb-6 inline-flex items-center gap-2 text-sm text-[#5A5248]">
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
           <div className="space-y-6">
@@ -2139,7 +2173,7 @@ export default function MarketMvpApp() {
                     {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
                     {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
                   </button>
-                  <button onClick={() => setScreen('connections')} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF]">
+                  <button onClick={goToConnections} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF]">
                     <Users size={16} /> {copy.myConnections}
                   </button>
                 </div>
@@ -2246,9 +2280,9 @@ export default function MarketMvpApp() {
 
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.myConnections} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={goToBrowse} onProfileClick={openOwnProfilePage} onConnectionsClick={goToConnections} currentScreen={copy.myConnections} />
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <button onClick={() => setScreen('browse')} className="mb-4 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+          <button onClick={goToBrowse} className="mb-4 inline-flex items-center gap-2 text-sm text-[#5A5248]">
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
           <SectionLabel title={copy.myConnections} subtitle={locale === 'zh' ? '收到的申请、发出的申请、已连接' : 'Incoming, outgoing, and connected'} />
@@ -2317,10 +2351,10 @@ export default function MarketMvpApp() {
 
     return (
       <div className="h-screen overflow-hidden bg-[#F7F4EF] text-[#1A1208]" onClick={() => setMessageContextMenu(null)}>
-        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.chat} />
+        <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={goToBrowse} onProfileClick={openOwnProfilePage} onConnectionsClick={goToConnections} currentScreen={copy.chat} />
         <div className="grid h-[calc(100vh-72px)] overflow-hidden lg:grid-cols-[320px_1fr]">
           <div className="min-h-0 overflow-y-auto border-r border-[#D8D0C4] bg-white p-5">
-            <button onClick={() => setScreen('connections')} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
+            <button onClick={goToConnections} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
               <ArrowLeft size={16} /> {locale === 'zh' ? '返回连接页' : 'Back to connections'}
             </button>
             {otherProfile ? (
@@ -2469,7 +2503,7 @@ export default function MarketMvpApp() {
 
   return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
-      <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.browse} />
+      <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={goToBrowse} onProfileClick={openOwnProfilePage} onConnectionsClick={goToConnections} currentScreen={copy.browse} />
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="mb-6 rounded-[1.5rem] border border-[#D8D0C4] bg-[#FAF3E8]/90 p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2">

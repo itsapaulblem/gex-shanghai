@@ -23,6 +23,9 @@ Write-Host "Checking required CLIs..."
 eb --version | Out-Host
 aws --version | Out-Host
 
+Write-Host "Building frontend bundle..."
+npm run build
+
 Write-Host "Building Docker image locally (sanity check)..."
 docker build -t $AppName .
 
