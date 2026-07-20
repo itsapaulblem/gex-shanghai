@@ -54,7 +54,7 @@
       "passwordHash": "5bf5d859febc9ad0d4f6912b2304105678d09d3a0fb34bbf5559f216e4db08da",
       "createdAt": "2026-07-18T04:34:59.444Z",
       "language": "en",
-      "lastSeenAt": "2026-07-20T05:11:56.506Z"
+      "lastSeenAt": "2026-07-20T05:13:37.277Z"
     },
     {
       "id": "user_42a0546c",
@@ -125,7 +125,7 @@
       "passwordHash": "7d4652789ceaee0dc20868d41cb13e09f053c2ac845b0ccd9f3a5d266dc3ae15",
       "createdAt": "2026-07-20T03:55:06.127Z",
       "language": "en",
-      "lastSeenAt": "2026-07-20T05:11:55.724Z"
+      "lastSeenAt": "2026-07-20T05:13:25.717Z"
     },
     {
       "id": "user_d25fffea",
@@ -854,6 +854,15 @@
       "messageType": "text",
       "imageDataUrl": null,
       "createdAt": "2026-07-20T05:02:52.758Z"
+    },
+    {
+      "id": "message_aa6eb7fc",
+      "connectionId": "connection_6164f122",
+      "senderUserId": "user_db3e9485",
+      "text": "你好",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-07-20T05:13:22.265Z"
     }
   ],
   "passwordResetTokens": [
