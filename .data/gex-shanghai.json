@@ -54,8 +54,17 @@
       "passwordSalt": "95b28874e714f83da583de2f58893bf8",
       "passwordHash": "fe30667ddb2bb80c57ae72ed857d664cb8fe0d7988ad6769f60ae9aced8b893d",
       "createdAt": "2026-07-20T08:34:20.877Z",
-      "language": "zh",
-      "lastSeenAt": "2026-07-20T08:34:39.414Z"
+      "language": "en",
+      "lastSeenAt": "2026-07-20T11:14:51.080Z"
+    },
+    {
+      "id": "user_00d3853f",
+      "email": "paulcheng461@gmail.com",
+      "passwordSalt": "e361dc7a416d3c70f7d051ae1f671b7d",
+      "passwordHash": "fe017e5bd4e64f444b094806608d512532d9b93fd0d324465b53f68c08558f82",
+      "createdAt": "2026-07-20T11:14:23.030Z",
+      "language": "en",
+      "lastSeenAt": "2026-07-20T11:14:33.743Z"
     }
   ],
   "sessions": [
@@ -63,12 +72,99 @@
       "token": "870411cf-ec37-45d4-9417-560921ac72e0",
       "userId": "user_d5cfb89c",
       "createdAt": "2026-07-20T08:34:20.877Z"
+    },
+    {
+      "token": "51b0229d-d891-4039-8840-6e4499c2ca5c",
+      "userId": "user_00d3853f",
+      "createdAt": "2026-07-20T11:14:23.030Z"
     }
   ],
   "passwordResetTokens": [],
   "signupOtps": [],
-  "profiles": [],
-  "connections": [],
+  "profiles": [
+    {
+      "id": "profile_571d1c99",
+      "ownerUserId": "user_d5cfb89c",
+      "honorific": "Mr",
+      "surname": "adscse",
+      "childAlias": "vcasswev",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "cadscs",
+      "major": "ascac",
+      "industry": "cas",
+      "jobTitle": "ascc",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "sacasc"
+      ],
+      "hobbies": "ascac",
+      "about": "casasc",
+      "preferredAgeRange": "",
+      "preferredHeightRange": "",
+      "minEducationLevel": "",
+      "hukouPreference": "Shanghai hukou preferred",
+      "additionalPreferences": "cassa",
+      "preferences": "Shanghai hukou preferred · cassa",
+      "createdAt": "2026-07-20T11:14:07.371Z"
+    },
+    {
+      "id": "profile_5e3ec6f4",
+      "ownerUserId": "user_00d3853f",
+      "honorific": "Mr",
+      "surname": "sdeavsdv",
+      "childAlias": "vdsvsedds",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "dvssdv",
+      "major": "dvdsa",
+      "industry": "sdvsdvsd",
+      "jobTitle": "vdvsvds",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "vsdvsd"
+      ],
+      "hobbies": "dvsvds",
+      "about": "sdvsdvsd",
+      "preferredAgeRange": "",
+      "preferredHeightRange": "",
+      "minEducationLevel": "",
+      "hukouPreference": "",
+      "additionalPreferences": "vdsvsvd",
+      "preferences": "vdsvsvd",
+      "createdAt": "2026-07-20T11:14:32.472Z"
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection_65bac1b5",
+      "requesterUserId": "user_00d3853f",
+      "requesterProfileId": "profile_5e3ec6f4",
+      "targetUserId": "user_d5cfb89c",
+      "targetProfileId": "profile_571d1c99",
+      "status": "approved",
+      "createdAt": "2026-07-20T11:14:33.732Z",
+      "updatedAt": "2026-07-20T11:14:41.781Z"
+    }
+  ],
   "messages": [],
   "hiddenMessages": [],
   "typingStates": []

@@ -704,6 +704,16 @@ function getProfileConnectionState(
   return connected ? 'connected' as const : 'none' as const;
 }
 
+function getApprovedConnection(
+  profileId: string,
+  connections: { ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null,
+) {
+  return connections?.connected.find((connection) => {
+    const relatedProfileId = connection.otherProfile?.id ?? connection.targetProfileId ?? connection.requesterProfileId;
+    return relatedProfileId === profileId;
+  }) ?? null;
+}
+
 export default function MarketMvpApp() {
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [token, setToken] = useState<string | null>(getInitialToken);
@@ -2127,8 +2137,9 @@ export default function MarketMvpApp() {
   if (screen === 'detail' && selectedProfile) {
     const detailConnectionState = getProfileConnectionState(selectedProfile.id, connections);
     const detailPendingConnection = getPendingOutgoingConnection(selectedProfile.id, connections);
+    const detailApprovedConnection = getApprovedConnection(selectedProfile.id, connections);
     const detailRequested = detailConnectionState === 'pending';
-    const detailConnected = detailConnectionState === 'connected';
+    const detailConnected = detailApprovedConnection !== null && detailConnectionState === 'connected';
     const preferenceDetails = getPreferenceDetails(selectedProfile);
 
     return (
@@ -2173,6 +2184,16 @@ export default function MarketMvpApp() {
                     {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
                     {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
                   </button>
+                  {detailConnected && detailApprovedConnection ? (
+                    <button
+                      onClick={() => {
+                        void openChat(detailApprovedConnection.id);
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1A1208] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2D2419]"
+                    >
+                      <MessageSquare size={16} /> {locale === 'zh' ? '打开聊天' : 'Open chat'}
+                    </button>
+                  ) : null}
                   <button onClick={goToConnections} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF]">
                     <Users size={16} /> {copy.myConnections}
                   </button>
