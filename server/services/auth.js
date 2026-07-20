@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { createId, getState, hashPassword, sanitizeUser, touchUserActivity, withState } from '../store.js';
-import { sendPasswordResetEmail } from './mailer.js';
+import { sendPasswordResetEmail, sendSignupOtpEmail } from './mailer.js';
 
 function verifyPassword(password, user) {
   const candidate = user.passwordSalt ? hashPassword(password, user.passwordSalt) : hashPassword(password);
@@ -43,6 +43,108 @@ function validatePasswordStrength(password) {
   }
 
   return normalizedPassword;
+}
+
+function normalizeEmail(email) {
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    const error = new Error('EMAIL_REQUIRED');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!normalizedEmail.includes('@')) {
+    const error = new Error('EMAIL_INVALID');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalizedEmail;
+}
+
+function hashOtpCode(code) {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+function generateOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function requestSignupOtp({ email, language = 'zh' }) {
+  const normalizedEmail = normalizeEmail(email);
+
+  return withState(async (state) => {
+    const existingUser = state.users.find((user) => user.email === normalizedEmail);
+    if (existingUser) {
+      const error = new Error('EMAIL_EXISTS');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const code = generateOtpCode();
+    const now = Date.now();
+    const expiresAt = new Date(now + 10 * 60 * 1000).toISOString();
+    const otpRecord = {
+      id: createId('signup_otp'),
+      email: normalizedEmail,
+      codeHash: hashOtpCode(code),
+      expiresAt,
+      attempts: 0,
+      verifiedAt: null,
+      language,
+      createdAt: new Date(now).toISOString(),
+    };
+
+    state.signupOtps = (state.signupOtps ?? []).filter((candidate) => candidate.email !== normalizedEmail);
+    state.signupOtps.push(otpRecord);
+
+    await sendSignupOtpEmail(normalizedEmail, code, language);
+    return { ok: true, expiresAt };
+  });
+}
+
+async function verifySignupOtp({ email, otp }) {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedOtp = String(otp ?? '').trim();
+  if (!/^\d{6}$/.test(normalizedOtp)) {
+    const error = new Error('OTP_INVALID');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return withState(async (state) => {
+    const record = (state.signupOtps ?? []).find((candidate) => candidate.email === normalizedEmail) ?? null;
+    if (!record) {
+      const error = new Error('OTP_REQUIRED');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const expiresMs = new Date(record.expiresAt).getTime();
+    if (!Number.isFinite(expiresMs) || expiresMs <= Date.now()) {
+      state.signupOtps = (state.signupOtps ?? []).filter((candidate) => candidate.id !== record.id);
+      const error = new Error('OTP_EXPIRED');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    record.attempts = Number(record.attempts ?? 0) + 1;
+    if (record.attempts > 5) {
+      state.signupOtps = (state.signupOtps ?? []).filter((candidate) => candidate.id !== record.id);
+      const error = new Error('OTP_TOO_MANY_ATTEMPTS');
+      error.statusCode = 429;
+      throw error;
+    }
+
+    if (record.codeHash !== hashOtpCode(normalizedOtp)) {
+      const error = new Error('OTP_INVALID');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    record.verifiedAt = new Date().toISOString();
+    return { ok: true };
+  });
 }
 
 async function register({ email, password, language = 'zh' }) {
@@ -249,4 +351,13 @@ async function updateLanguage(userId, language) {
   });
 }
 
-export { login, register, requestPasswordReset, resetPassword, resolveSession, updateLanguage };
+export {
+  login,
+  register,
+  requestPasswordReset,
+  requestSignupOtp,
+  resetPassword,
+  resolveSession,
+  updateLanguage,
+  verifySignupOtp,
+};

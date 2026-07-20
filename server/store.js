@@ -78,6 +78,7 @@ function seedState() {
     users: seededUsers,
     sessions: [],
     passwordResetTokens: [],
+    signupOtps: [],
     profiles: [
       {
         id: 'profile_1',
@@ -238,6 +239,7 @@ function seedState() {
     ],
     connections: [],
     messages: [],
+    typingStates: [],
   };
 }
 
@@ -255,9 +257,11 @@ async function loadState() {
       state.users ??= [];
       state.sessions ??= [];
       state.passwordResetTokens ??= [];
+      state.signupOtps ??= [];
       state.profiles ??= [];
       state.connections ??= [];
       state.messages ??= [];
+      state.typingStates ??= [];
 
       const invalidUserIds = new Set(
         state.users

@@ -83,7 +83,7 @@ async function listConnections(userId) {
   const ownProfile = state.profiles.find((profile) => profile.ownerUserId === userId) ?? null;
   const relevant = state.connections.filter((connection) => connection.requesterUserId === userId || connection.targetUserId === userId);
   const incoming = relevant.filter((connection) => connection.targetUserId === userId && connection.status === 'pending').map((connection) => computeConnectionView(connection, userId, state));
-  const outgoing = relevant.filter((connection) => connection.requesterUserId === userId).map((connection) => computeConnectionView(connection, userId, state));
+  const outgoing = relevant.filter((connection) => connection.requesterUserId === userId && connection.status === 'pending').map((connection) => computeConnectionView(connection, userId, state));
   const connected = relevant.filter((connection) => connection.status === 'approved').map((connection) => computeConnectionView(connection, userId, state));
 
   return {

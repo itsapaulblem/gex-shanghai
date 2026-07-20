@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { approveConnection, cancelConnection, listConnections, rejectConnection, removeConnection, requestConnection } from './services/connections.js';
-import { listMessages, sendMessage } from './services/chat.js';
-import { login, register, requestPasswordReset, resetPassword, resolveSession, updateLanguage } from './services/auth.js';
+import { listMessages, sendMessage, setTypingState } from './services/chat.js';
+import { login, register, requestPasswordReset, requestSignupOtp, resetPassword, resolveSession, updateLanguage, verifySignupOtp } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
 import { loadState, touchUserActivity } from './store.js';
 
@@ -144,6 +144,20 @@ async function handleApi(request, response) {
       const body = await readBody(request);
       const result = await register(body);
       sendJson(response, 201, result);
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/auth/request-signup-otp') {
+      const body = await readBody(request);
+      const result = await requestSignupOtp(body);
+      sendJson(response, 200, result);
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/auth/verify-signup-otp') {
+      const body = await readBody(request);
+      const result = await verifySignupOtp(body);
+      sendJson(response, 200, result);
       return;
     }
 
@@ -328,8 +342,21 @@ async function handleApi(request, response) {
 
       const connectionId = url.pathname.split('/')[3];
       const body = await readBody(request);
-      const message = await sendMessage(connectionId, currentUser.id, body.text ?? '');
+      const message = await sendMessage(connectionId, currentUser.id, body.text ?? '', body.imageDataUrl ?? '');
       sendJson(response, 201, { message });
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname.startsWith('/api/chats/') && url.pathname.endsWith('/typing')) {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const connectionId = url.pathname.split('/')[3];
+      const body = await readBody(request);
+      const result = await setTypingState(connectionId, currentUser.id, Boolean(body.isTyping));
+      sendJson(response, 200, result);
       return;
     }
 

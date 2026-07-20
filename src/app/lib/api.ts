@@ -68,6 +68,8 @@ export interface MessageRecord {
   connectionId: string;
   senderUserId: string;
   text: string;
+  messageType?: 'text' | 'image';
+  imageDataUrl?: string | null;
   createdAt: string;
 }
 
@@ -79,6 +81,11 @@ export interface SessionRecord {
 
 export interface RequestOkResponse {
   ok: true;
+}
+
+export interface SignupOtpResponse {
+  ok: true;
+  expiresAt?: string;
 }
 
 async function requestJson<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
@@ -102,6 +109,8 @@ async function requestJson<T>(path: string, options: RequestInit = {}, token?: s
 }
 
 export const api = {
+  requestSignupOtp: (data: { email: string; language?: Locale }) => requestJson<SignupOtpResponse>('/api/auth/request-signup-otp', { method: 'POST', body: JSON.stringify(data) }),
+  verifySignupOtp: (data: { email: string; otp: string }) => requestJson<RequestOkResponse>('/api/auth/verify-signup-otp', { method: 'POST', body: JSON.stringify(data) }),
   register: (data: { email: string; password: string; language?: Locale }) => requestJson<SessionRecord>('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) => requestJson<SessionRecord>('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   requestPasswordReset: (data: { email: string }) => requestJson<RequestOkResponse>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
@@ -122,6 +131,7 @@ export const api = {
   rejectConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/reject`, { method: 'POST' }, token),
   cancelConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/cancel`, { method: 'POST' }, token),
   removeConnection: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord }>(`/api/connections/${connectionId}/remove`, { method: 'POST' }, token),
-  loadChat: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord; messages: MessageRecord[] }>(`/api/chats/${connectionId}`, {}, token),
-  sendMessage: (token: string, connectionId: string, text: string) => requestJson<{ message: MessageRecord }>(`/api/chats/${connectionId}/messages`, { method: 'POST', body: JSON.stringify({ text }) }, token),
+  loadChat: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord; messages: MessageRecord[]; typingUserIds?: string[] }>(`/api/chats/${connectionId}`, {}, token),
+  sendMessage: (token: string, connectionId: string, payload: { text?: string; imageDataUrl?: string | null }) => requestJson<{ message: MessageRecord }>(`/api/chats/${connectionId}/messages`, { method: 'POST', body: JSON.stringify(payload) }, token),
+  setTyping: (token: string, connectionId: string, isTyping: boolean) => requestJson<RequestOkResponse>(`/api/chats/${connectionId}/typing`, { method: 'POST', body: JSON.stringify({ isTyping }) }, token),
 };

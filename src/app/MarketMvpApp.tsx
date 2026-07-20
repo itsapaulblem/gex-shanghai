@@ -10,6 +10,7 @@ import {
   Heart,
   LogIn,
   Filter,
+  ImagePlus,
   MessageSquare,
   Search,
   Send,
@@ -70,6 +71,11 @@ type Copy = {
   signIn: string;
   createAccount: string;
   forgotPassword: string;
+  requestOtp: string;
+  otpCode: string;
+  verifyOtp: string;
+  otpSent: string;
+  resendOtp: string;
   forgotPasswordTitle: string;
   forgotPasswordDescription: string;
   forgotPasswordSubmit: string;
@@ -122,15 +128,20 @@ const COPY: Record<Locale, Copy> = {
     signIn: '登录 / 注册',
     createAccount: '注册',
     forgotPassword: '忘记密码？',
+    requestOtp: '发送邮箱验证码',
+    otpCode: '验证码',
+    verifyOtp: '验证并创建账号',
+    otpSent: '验证码已发送到邮箱，请输入 6 位数字完成验证。',
+    resendOtp: '重新发送验证码',
     forgotPasswordTitle: '重置账户密码',
     forgotPasswordDescription: '输入注册邮箱，我们会发送一封重置密码邮件。点击邮件中的链接后即可设置新密码。',
     forgotPasswordSubmit: '发送重置邮件',
     forgotPasswordBack: '返回登录',
-    forgotPasswordSuccess: 'Success! Reset email sent if the account exists.',
+    forgotPasswordSuccess: '成功：如果账号存在，重置邮件已发送。',
     resetPasswordTitle: '设置新密码',
     resetPasswordDescription: '请输入新密码。密码至少 8 位，包含 1 个大写字母和 1 个特殊字符。',
     resetPasswordSubmit: '更新密码',
-    resetPasswordSuccess: 'Success! Password updated. Please sign in again.',
+    resetPasswordSuccess: '成功：密码已更新，请重新登录。',
     newPassword: '新密码',
     confirmPassword: '确认新密码',
     language: 'English',
@@ -172,6 +183,11 @@ const COPY: Record<Locale, Copy> = {
     signIn: 'Sign in / Register',
     createAccount: 'Create account',
     forgotPassword: 'Forgot password?',
+    requestOtp: 'Send email OTP',
+    otpCode: 'OTP code',
+    verifyOtp: 'Verify and create account',
+    otpSent: 'Verification code sent. Enter the 6-digit OTP to continue.',
+    resendOtp: 'Resend code',
     forgotPasswordTitle: 'Reset your password',
     forgotPasswordDescription: 'Enter the account email and we will send a password reset link. Open the link in the email to choose a new password.',
     forgotPasswordSubmit: 'Send reset email',
@@ -461,7 +477,6 @@ const REQUIRED_PROFILE_FIELDS: (keyof ProfileFormState)[] = [
   'car',
   'traits',
   'hobbies',
-  'preferredAgeRange',
 ];
 
 const PROFILE_SETUP_STEPS: { title: { zh: string; en: string }; fields: (keyof ProfileFormState)[] }[] = [
@@ -668,7 +683,7 @@ function formatLastSeenHours(lastSeenAt?: string | null) {
 }
 
 function ProfilePill({ profile }: { profile: ProfileRecord }) {
-  return <Badge tone={profile.hukou === '上海' ? 'gold' : 'default'}>{profile.hukou === '上海' ? '沪籍' : profile.hukou}</Badge>;
+  return <Badge tone={profile.hukou === '上海' ? 'gold' : 'default'}>{profile.hukou === '上海' ? '户籍: 上海' : `户籍: ${profile.hukou}`}</Badge>;
 }
 
 function getProfileConnectionState(
@@ -713,8 +728,11 @@ export default function MarketMvpApp() {
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ProfileRecord | null>(null);
   const [connections, setConnections] = useState<{ ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null>(null);
-  const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[] } | null>(null);
+  const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[]; typingUserIds?: string[] } | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [chatTypingActive, setChatTypingActive] = useState(false);
+  const [pendingImageDataUrl, setPendingImageDataUrl] = useState<string | null>(null);
+  const [pendingImageName, setPendingImageName] = useState('');
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const [removeConnectionConfirm, setRemoveConnectionConfirm] = useState<{ connectionId: string; step: 1 | 2 } | null>(null);
   const [filters, setFilters] = useState({
@@ -738,10 +756,43 @@ export default function MarketMvpApp() {
 
   function formatErrorMessage(error: unknown) {
     const code = String((error as { message?: string } | null)?.message ?? error ?? 'REQUEST_FAILED');
-    const mapped: Record<string, string> = {
+    const mappedZh: Record<string, string> = {
+      EMAIL_REQUIRED: '错误：请输入邮箱。',
+      EMAIL_INVALID: '错误：邮箱格式不正确。',
+      EMAIL_EXISTS: '错误：档案已存在。',
+      OTP_REQUIRED: '错误：请先获取并填写验证码。',
+      OTP_NOT_VERIFIED: '错误：请先完成邮箱验证码验证。',
+      OTP_INVALID: '错误：验证码不正确。',
+      OTP_EXPIRED: '错误：验证码已过期，请重新获取。',
+      OTP_TOO_MANY_ATTEMPTS: '错误：验证码尝试次数过多，请重新获取。',
+      INVALID_CREDENTIALS: '错误：账号或密码错误。',
+      PASSWORD_TOO_WEAK: '错误：密码至少 8 位，需包含 1 个大写字母和 1 个特殊字符。',
+      PASSWORD_MISMATCH: '错误：两次密码输入不一致。',
+      RESET_TOKEN_REQUIRED: '错误：缺少重置链接参数。',
+      RESET_TOKEN_INVALID: '错误：重置链接无效。',
+      RESET_TOKEN_EXPIRED: '错误：重置链接已过期，请重新申请。',
+      CANCEL_NOT_ALLOWED: '错误：仅可取消待处理申请。',
+      REMOVE_NOT_ALLOWED: '错误：仅可移除已通过的连接。',
+      PROFILE_EXISTS: '错误：档案已存在。',
+      PROFILE_NOT_FOUND: '错误：未找到档案。',
+      PROFILE_REQUIRED: '错误：请补全必填项。',
+      MESSAGE_EMPTY: '错误：请输入消息或上传图片后再发送。',
+      MESSAGE_IMAGE_INVALID: '错误：图片格式无效。',
+      MESSAGE_IMAGE_TOO_LARGE: '错误：图片过大，请控制在约 1.8MB 以内。',
+      UNAUTHORIZED: '错误：登录状态已失效，请重新登录。',
+      REQUEST_FAILED: '错误：请求失败，请稍后重试。',
+      NOT_FOUND: '错误：请求地址不存在。',
+    };
+
+    const mappedEn: Record<string, string> = {
       EMAIL_REQUIRED: 'Error! Email is required!',
       EMAIL_INVALID: 'Error! Email must include @!',
-      EMAIL_EXISTS: 'Error! Email exists!',
+      EMAIL_EXISTS: 'Error! Profile exists!',
+      OTP_REQUIRED: 'Error! Please request and enter your OTP code!',
+      OTP_NOT_VERIFIED: 'Error! Verify email with OTP before creating account!',
+      OTP_INVALID: 'Error! Invalid OTP code!',
+      OTP_EXPIRED: 'Error! OTP expired. Please request a new code!',
+      OTP_TOO_MANY_ATTEMPTS: 'Error! Too many OTP attempts. Request a new code!',
       INVALID_CREDENTIALS: 'Error! Wrong Password!',
       PASSWORD_TOO_WEAK: 'Error! Password needs 8 characters, one uppercase letter, and one special character!',
       PASSWORD_MISMATCH: 'Error! Passwords do not match!',
@@ -753,10 +804,16 @@ export default function MarketMvpApp() {
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
       PROFILE_REQUIRED: 'Error! Missing Fields!',
+      MESSAGE_EMPTY: 'Error! Enter text or attach an image before sending!',
+      MESSAGE_IMAGE_INVALID: 'Error! Invalid image format!',
+      MESSAGE_IMAGE_TOO_LARGE: 'Error! Image is too large! Keep it under about 1.8MB.',
       UNAUTHORIZED: 'Error! Please sign in again!',
       REQUEST_FAILED: 'Error! Request failed!',
+      NOT_FOUND: 'Error! Not found!',
     };
-    return mapped[code] ?? `Error! ${code.replaceAll('_', ' ')}`;
+
+    const mapped = locale === 'zh' ? mappedZh : mappedEn;
+    return mapped[code] ?? (locale === 'zh' ? `错误：${code.replaceAll('_', ' ')}` : `Error! ${code.replaceAll('_', ' ')}`);
   }
 
   function populateProfileForm(profile?: ProfileRecord | null) {
@@ -892,12 +949,55 @@ export default function MarketMvpApp() {
     setBrowsePage(1);
   }, [filters.search, filters.gender, filters.ageRange, filters.heightRange, filters.minEducation, filters.salaryRange, filters.sort]);
 
+  useEffect(() => {
+    if (screen !== 'chat' || !token || !chat) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshOpenChat(token);
+    }, 2000);
+
+    return () => window.clearInterval(timer);
+  }, [screen, token, chat?.connection.id]);
+
+  useEffect(() => {
+    if (!token || !chat || screen !== 'chat') {
+      return;
+    }
+
+    const shouldBroadcastTyping = messageText.trim().length > 0;
+    if (shouldBroadcastTyping === chatTypingActive) {
+      return;
+    }
+
+    setChatTypingActive(shouldBroadcastTyping);
+    const timer = window.setTimeout(() => {
+      void api.setTyping(token, chat.connection.id, shouldBroadcastTyping).catch(() => undefined);
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [messageText, token, chat?.connection.id, screen, chatTypingActive]);
+
+  useEffect(() => {
+    if (!token || !chat || screen === 'chat' || !chatTypingActive) {
+      return;
+    }
+
+    void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
+    setChatTypingActive(false);
+  }, [screen, token, chat?.connection.id, chatTypingActive]);
+
   async function submitAuth() {
     try {
       setAuthBusy(true);
-      const payload = authMode === 'login'
-        ? await api.login({ email: authEmail, password: authPassword })
-        : await api.register({ email: authEmail, password: authPassword, language: locale });
+      let payload: SessionRecord;
+
+      if (authMode === 'login') {
+        payload = await api.login({ email: authEmail, password: authPassword });
+      } else {
+        payload = await api.register({ email: authEmail, password: authPassword, language: locale });
+      }
 
       window.localStorage.setItem('gex-token', payload.token);
       setToken(payload.token);
@@ -907,7 +1007,10 @@ export default function MarketMvpApp() {
       if (payload.profile) {
         await Promise.all([refreshBrowse(payload.token), refreshConnections(payload.token)]);
       }
-      showNotice(authMode === 'login' ? 'Success! Logged in.' : 'Success! Account created.', 'success');
+
+      showNotice(authMode === 'login'
+        ? (locale === 'zh' ? '成功：登录成功。' : 'Success! Logged in.')
+        : (locale === 'zh' ? '成功：账号创建成功。' : 'Success! Account created.'), 'success');
     } catch (error) {
       showNotice(formatErrorMessage(error));
     } finally {
@@ -991,6 +1094,34 @@ export default function MarketMvpApp() {
     } finally {
       setProfileBusy(false);
     }
+  }
+
+  function getMissingFieldForStep(stepNumber: number) {
+    const stepConfig = PROFILE_SETUP_STEPS[stepNumber - 1];
+    if (!stepConfig) {
+      return null;
+    }
+
+    return stepConfig.fields.find((fieldKey) => {
+      if (!REQUIRED_PROFILE_FIELDS.includes(fieldKey)) {
+        return false;
+      }
+
+      const value = profileForm[fieldKey];
+      return typeof value === 'string' ? !value.trim() : false;
+    }) ?? null;
+  }
+
+  function goToNextSetupStep() {
+    const missingField = getMissingFieldForStep(setupStep);
+    if (missingField) {
+      const fieldLabel = PROFILE_FIELD_LABELS[missingField];
+      const label = locale === 'zh' ? fieldLabel.zh : fieldLabel.en;
+      showNotice(`${locale === 'zh' ? '错误：请先填写：' : 'Error! Please fill:'} ${label}`);
+      return;
+    }
+
+    setSetupStep((current) => Math.min(PROFILE_SETUP_STEPS.length, current + 1));
   }
 
   async function openProfile(profileId: string) {
@@ -1100,24 +1231,77 @@ export default function MarketMvpApp() {
       setChat(payload);
       setScreen('chat');
       setMessageText('');
+      setPendingImageDataUrl(null);
+      setPendingImageName('');
+      setChatTypingActive(false);
     } catch (error) {
       showNotice(formatErrorMessage(error));
     }
   }
 
   async function sendChatMessage() {
-    if (!token || !chat || !messageText.trim()) {
+    if (!token || !chat || (!messageText.trim() && !pendingImageDataUrl)) {
       return;
     }
 
     try {
-      await api.sendMessage(token, chat.connection.id, messageText.trim());
+      await api.sendMessage(token, chat.connection.id, {
+        text: messageText.trim(),
+        imageDataUrl: pendingImageDataUrl,
+      });
       const payload = await api.loadChat(token, chat.connection.id);
       setChat(payload);
       setMessageText('');
+      setPendingImageDataUrl(null);
+      setPendingImageName('');
+      setChatTypingActive(false);
+      await api.setTyping(token, chat.connection.id, false);
     } catch (error) {
       showNotice(formatErrorMessage(error));
     }
+  }
+
+  async function refreshOpenChat(activeToken = token) {
+    if (!activeToken || !chat) {
+      return;
+    }
+
+    try {
+      const payload = await api.loadChat(activeToken, chat.connection.id);
+      setChat(payload);
+    } catch {
+      // Keep the current chat view stable during transient polling failures.
+    }
+  }
+
+  async function attachImageToMessage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      showNotice(locale === 'zh' ? '错误：仅支持图片文件。' : 'Error! Only image files are supported.');
+      return;
+    }
+
+    if (file.size > 1_800_000) {
+      showNotice(locale === 'zh' ? '错误：图片过大，请选择小于 1.8MB 的图片。' : 'Error! Image too large. Choose one smaller than 1.8MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        showNotice(locale === 'zh' ? '错误：图片读取失败。' : 'Error! Failed to read image.');
+        return;
+      }
+
+      setPendingImageDataUrl(result);
+      setPendingImageName(file.name);
+    };
+    reader.onerror = () => showNotice(locale === 'zh' ? '错误：图片读取失败。' : 'Error! Failed to read image.');
+    reader.readAsDataURL(file);
   }
 
   async function signOut() {
@@ -1348,13 +1532,17 @@ export default function MarketMvpApp() {
 
               <div className="mb-4 grid grid-cols-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] p-1">
                 <button
-                  onClick={() => setAuthMode('register')}
+                  onClick={() => {
+                    setAuthMode('register');
+                  }}
                   className={`rounded-full px-3 py-2 text-base ${authMode === 'register' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.createAccount}
                 </button>
                 <button
-                  onClick={() => setAuthMode('login')}
+                  onClick={() => {
+                    setAuthMode('login');
+                  }}
                   className={`rounded-full px-3 py-2 text-base ${authMode === 'login' ? 'bg-[#B5272A] text-white' : 'text-[#5A5248]'}`}
                 >
                   {copy.login}
@@ -1369,7 +1557,7 @@ export default function MarketMvpApp() {
                     onChange={(event) => setAuthEmail(event.target.value)}
                     type="email"
                     className={inputClass}
-                    placeholder="12345678@qq.com"
+                    placeholder="example@qq.com"
                   />
                 </label>
                 <label className="block">
@@ -1391,25 +1579,16 @@ export default function MarketMvpApp() {
                       {authPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                </label>
+                  </label>
                 {authMode === 'login' ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotEmail(authEmail.trim());
-                      setScreen('forgot-password');
-                    }}
-                    className="text-sm font-medium text-[#B5272A] hover:text-[#9E2224]"
-                  >
-                    {copy.forgotPassword}
-                  </button>
+                  null
                 ) : null}
                 <button
                   onClick={submitAuth}
                   disabled={authBusy}
                   className={primaryButtonClass}
                 >
-                  <LogIn size={16} /> {copy.signIn}
+                  <LogIn size={16} /> {authMode === 'register' ? copy.createAccount : copy.signIn}
                 </button>
               </div>
       </>,
@@ -1431,7 +1610,7 @@ export default function MarketMvpApp() {
             onChange={(event) => setForgotEmail(event.target.value)}
             type="email"
             className={inputClass}
-            placeholder="12345678@qq.com"
+            placeholder="example@qq.com"
           />
         </label>
 
@@ -1571,6 +1750,14 @@ export default function MarketMvpApp() {
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
               {HONORIFIC_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          ) : fieldKey === 'education' ? (
+            <select
+              value={profileForm.education}
+              onChange={(event) => setProfileForm((current) => ({ ...current, education: event.target.value }))}
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+            >
+              {['大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
             </select>
           ) : fieldKey === 'income' ? (
             <select
@@ -1739,7 +1926,7 @@ export default function MarketMvpApp() {
                   </button>
                   {setupStep < totalSetupSteps ? (
                     <button
-                      onClick={() => setSetupStep((current) => Math.min(totalSetupSteps, current + 1))}
+                      onClick={goToNextSetupStep}
                       className="inline-flex items-center gap-2 rounded-lg bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224]"
                     >
                       {locale === 'zh' ? '下一步' : 'Next step'} <ChevronRight size={16} />
@@ -1819,10 +2006,10 @@ export default function MarketMvpApp() {
 
                 <div className="rounded-2xl border border-[#D8D0C4] bg-white overflow-hidden">
                   {[
-                    { label: locale === 'zh' ? '城市' : 'City', value: `${selectedProfile.city} · 户籍${selectedProfile.hukou}` },
-                    { label: locale === 'zh' ? '学历' : 'Education', value: `${selectedProfile.education} · ${selectedProfile.school}` },
-                    { label: locale === 'zh' ? '行业' : 'Industry', value: selectedProfile.industry },
-                    { label: locale === 'zh' ? '月收入' : 'Monthly income', value: selectedProfile.income },
+                    { label: locale === 'zh' ? '地区' : 'Location', value: locale === 'zh' ? `城市: ${selectedProfile.city} · 户籍: ${selectedProfile.hukou}` : `City: ${selectedProfile.city} · Hukou: ${selectedProfile.hukou}` },
+                    { label: locale === 'zh' ? '学历' : 'Education', value: locale === 'zh' ? `学历: ${selectedProfile.education} · 学校: ${selectedProfile.school}` : `Education: ${selectedProfile.education} · School: ${selectedProfile.school}` },
+                    { label: locale === 'zh' ? '职业' : 'Work', value: locale === 'zh' ? `行业: ${selectedProfile.industry} · 职位: ${selectedProfile.jobTitle}` : `Industry: ${selectedProfile.industry} · Job: ${selectedProfile.jobTitle}` },
+                    { label: locale === 'zh' ? '收入' : 'Income', value: locale === 'zh' ? `月收入: ${selectedProfile.income}` : `Monthly income: ${selectedProfile.income}` },
                     { label: locale === 'zh' ? '房产' : 'Property', value: selectedProfile.property },
                     { label: locale === 'zh' ? '车辆' : 'Vehicle', value: selectedProfile.car },
                   ].map((item, index) => (
@@ -1837,11 +2024,6 @@ export default function MarketMvpApp() {
 
             <SectionLabel title={locale === 'zh' ? '详细资料 · In Detail' : 'In Detail'} />
             <div className="space-y-4">
-              <Card className="p-5">
-                <SectionLabel title={locale === 'zh' ? '父母寄语' : "Parent's Note"} />
-                <p className="text-sm leading-8 text-[#3A3028] font-serif">{selectedProfile.about || '—'}</p>
-              </Card>
-
               <Card className="overflow-hidden">
                 <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
                   <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '基本资料 · Basic Info' : 'Basic Info'}</span>
@@ -1903,6 +2085,11 @@ export default function MarketMvpApp() {
                     </div>
                   ))}
                 </div>
+              </Card>
+
+              <Card className="p-5">
+                <SectionLabel title={locale === 'zh' ? '父母寄语' : "Parent's Note"} />
+                <p className="text-sm leading-8 text-[#3A3028] font-serif">{selectedProfile.about || '—'}</p>
               </Card>
             </div>
           </div>
@@ -2043,6 +2230,11 @@ export default function MarketMvpApp() {
           </div>
           <div className="flex min-h-0 flex-col">
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+              {(chat.typingUserIds?.length ?? 0) > 0 ? (
+                <div className="text-xs text-[#7A6E62]">
+                  {locale === 'zh' ? '对方正在输入…' : 'The other person is typing...'}
+                </div>
+              ) : null}
               {chat.messages.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有消息，先发第一条吧' : 'No messages yet. Send the first one.'} /> : chat.messages.map((message) => (
                 <MessageBubble
                   key={message.id}
@@ -2052,12 +2244,49 @@ export default function MarketMvpApp() {
               ))}
             </div>
             <div className="border-t border-[#D8D0C4] bg-white p-4">
+              {pendingImageDataUrl ? (
+                <div className="mb-3 flex items-start gap-3 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] p-3">
+                  <img src={pendingImageDataUrl} alt={pendingImageName || 'attachment'} className="h-16 w-16 rounded-lg object-cover" />
+                  <div className="flex-1">
+                    <div className="text-xs font-medium text-[#1A1208]">{pendingImageName || (locale === 'zh' ? '待发送图片' : 'Image to send')}</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingImageDataUrl(null);
+                        setPendingImageName('');
+                      }}
+                      className="mt-1 text-xs text-[#B5272A]"
+                    >
+                      {locale === 'zh' ? '移除图片' : 'Remove image'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <div className="flex gap-3">
+                <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-3 py-3 text-[#5A5248] hover:bg-[#F2EDE4]">
+                  <ImagePlus size={16} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      void attachImageToMessage(file);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
                 <input
                   value={messageText}
                   onChange={(event) => setMessageText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void sendChatMessage();
+                    }
+                  }}
                   placeholder={locale === 'zh' ? '输入消息...' : 'Type a message...'}
-                    className="flex-1 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+                  className="flex-1 rounded-xl border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
                 />
                 <button onClick={sendChatMessage} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224]">
                   <Send size={16} /> {locale === 'zh' ? '发送' : 'Send'}
@@ -2143,7 +2372,7 @@ export default function MarketMvpApp() {
                   <option value="height-desc">{locale === 'zh' ? '身高降序' : 'Height desc'}</option>
                 </select>
               </label>
-              <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl bg-[#B5272A] px-5 py-3 text-sm font-medium text-white hover:bg-[#9E2224] transition-colors">
+              <button onClick={() => refreshBrowse(token, filters).catch((error) => showNotice(formatErrorMessage(error)))} className="inline-flex items-center gap-2 rounded-xl border border-[#D8D0C4] bg-white px-5 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF] transition-colors">
               <Search size={16} /> {locale === 'zh' ? '搜索' : 'Search'}
               </button>
             </div>
@@ -2175,17 +2404,21 @@ export default function MarketMvpApp() {
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div>
                       <div className="text-lg font-semibold">{profile.gender} · {formatAge(profile)}</div>
-                      <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">{profile.city} · {profile.hukou} · {profile.education}</div>
+                      <div className="mt-1 text-sm font-semibold text-[#5A5248]">
+                        {locale === 'zh'
+                          ? `城市: ${profile.city} · 户籍: ${profile.hukou} · 学历: ${profile.education}`
+                          : `City: ${profile.city} · Hukou: ${profile.hukou} · Education: ${profile.education}`}
+                      </div>
                     </div>
-                    <ProfilePill profile={profile} />
                   </div>
+                  <div className="mb-2 text-sm font-semibold text-[#5A5248]">{locale === 'zh' ? '性格标签' : 'Traits'}</div>
                   <div className="flex flex-wrap gap-2">{profile.traits.map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
                 </div>
                 <div className="p-5">
                   <div className="space-y-2 text-sm text-[#5A5248]">
-                    <div>{profile.school} · {profile.major}</div>
-                    <div>{profile.industry} · {profile.jobTitle}</div>
-                    <div>{profile.income}</div>
+                    <div>{locale === 'zh' ? `学校/专业: ${profile.school} · ${profile.major}` : `School/Major: ${profile.school} · ${profile.major}`}</div>
+                    <div>{locale === 'zh' ? `行业/职业: ${profile.industry} · ${profile.jobTitle}` : `Industry/Job: ${profile.industry} · ${profile.jobTitle}`}</div>
+                    <div>{locale === 'zh' ? `月收入: ${profile.income}` : `Monthly income: ${profile.income}`}</div>
                   </div>
                   <div className="mt-4 flex gap-2">
                     <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
@@ -2223,7 +2456,7 @@ export default function MarketMvpApp() {
               <button
                 key={`${item}-${index}`}
                 onClick={() => setBrowsePage(item)}
-                className={`flex h-7 w-7 items-center justify-center rounded border text-xs ${activeBrowsePage === item ? 'border-[#B5272A] bg-[#B5272A] text-white' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+                className={`flex h-8 min-w-8 items-center justify-center rounded border px-2 text-xs ${activeBrowsePage === item ? 'border-[#B91C1C] bg-[#FDECEC] text-[#8F1010] font-bold shadow-sm ring-1 ring-[#F5C4C5]' : 'border-[#D77A7A] bg-[#FFF5F5] text-[#B91C1C]'}`}
               >
                 {item}
               </button>
@@ -2311,7 +2544,11 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold">{profile.gender} · {profile.age}岁 · {profile.height}cm</div>
-          <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">{profile.city} · {profile.education} · {profile.industry}</div>
+          <div className="mt-1 text-[10px] font-mono text-[#7A6E62]">
+            {locale === 'zh'
+              ? `城市: ${profile.city} · 学历: ${profile.education} · 行业: ${profile.industry}`
+              : `City: ${profile.city} · Education: ${profile.education} · Industry: ${profile.industry}`}
+          </div>
         </div>
         <Badge tone={connection.status === 'approved' ? 'green' : connection.status === 'rejected' ? 'default' : 'yellow'}>{connection.status === 'approved' ? (locale === 'zh' ? '已通过' : 'Approved') : connection.status === 'rejected' ? (locale === 'zh' ? '已拒绝' : 'Rejected') : (locale === 'zh' ? '待处理' : 'Pending')}</Badge>
       </div>
@@ -2319,7 +2556,7 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
       <div className="mt-4 flex gap-2">
         {onViewProfile ? <button onClick={() => void onViewProfile(profile.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '查看完整档案' : 'View full profile'}</button> : null}
         {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
-        {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
+        {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
         {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
         {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white hover:bg-[#256F3C]">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
         {onRemoveConnection && connection.status === 'approved' ? <button onClick={() => onRemoveConnection(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '移除连接' : 'Remove connection'}</button> : null}
@@ -2351,7 +2588,12 @@ function MessageBubble({ message, mine }: { message: MessageRecord; mine: boolea
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-xl rounded-2xl px-4 py-3 text-sm leading-7 ${mine ? 'bg-[#A87C1A] text-white' : 'border border-[#D8D0C4] bg-white text-[#1A1208]'}`}>
-        {message.text}
+        {message.messageType === 'image' && message.imageDataUrl ? (
+          <a href={message.imageDataUrl} target="_blank" rel="noreferrer">
+            <img src={message.imageDataUrl} alt="chat attachment" className="mb-2 max-h-72 rounded-xl object-cover" />
+          </a>
+        ) : null}
+        {message.text ? <div>{message.text}</div> : null}
       </div>
     </div>
   );
