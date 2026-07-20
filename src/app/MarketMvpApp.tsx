@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -733,6 +733,7 @@ export default function MarketMvpApp() {
   const [chatTypingActive, setChatTypingActive] = useState(false);
   const [pendingImageDataUrl, setPendingImageDataUrl] = useState<string | null>(null);
   const [pendingImageName, setPendingImageName] = useState('');
+  const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const [removeConnectionConfirm, setRemoveConnectionConfirm] = useState<{ connectionId: string; step: 1 | 2 } | null>(null);
   const [filters, setFilters] = useState({
@@ -779,6 +780,7 @@ export default function MarketMvpApp() {
       MESSAGE_EMPTY: '错误：请输入消息或上传图片后再发送。',
       MESSAGE_IMAGE_INVALID: '错误：图片格式无效。',
       MESSAGE_IMAGE_TOO_LARGE: '错误：图片过大，请控制在约 1.8MB 以内。',
+      MESSAGE_NOT_FOUND: '错误：消息不存在或已删除。',
       UNAUTHORIZED: '错误：登录状态已失效，请重新登录。',
       REQUEST_FAILED: '错误：请求失败，请稍后重试。',
       NOT_FOUND: '错误：请求地址不存在。',
@@ -807,6 +809,7 @@ export default function MarketMvpApp() {
       MESSAGE_EMPTY: 'Error! Enter text or attach an image before sending!',
       MESSAGE_IMAGE_INVALID: 'Error! Invalid image format!',
       MESSAGE_IMAGE_TOO_LARGE: 'Error! Image is too large! Keep it under about 1.8MB.',
+      MESSAGE_NOT_FOUND: 'Error! Message not found or already deleted.',
       UNAUTHORIZED: 'Error! Please sign in again!',
       REQUEST_FAILED: 'Error! Request failed!',
       NOT_FOUND: 'Error! Not found!',
@@ -1271,6 +1274,44 @@ export default function MarketMvpApp() {
       setChat(payload);
     } catch {
       // Keep the current chat view stable during transient polling failures.
+    }
+  }
+
+  async function deleteChatMessage(messageId: string) {
+    if (!token || !chat) {
+      return;
+    }
+
+    try {
+      await api.deleteMessage(token, chat.connection.id, messageId);
+      const payload = await api.loadChat(token, chat.connection.id);
+      setChat(payload);
+      setMessageContextMenu(null);
+      showNotice(locale === 'zh' ? '成功：消息已删除。' : 'Success! Message deleted.', 'success');
+    } catch (error) {
+      const code = String((error as { message?: string } | null)?.message ?? 'REQUEST_FAILED');
+      if (code === 'NOT_FOUND') {
+        showNotice(locale === 'zh' ? '错误：当前服务未加载删除接口，请重启后端。' : 'Error! Delete API not loaded. Please restart backend server.');
+        return;
+      }
+
+      showNotice(formatErrorMessage(error));
+    }
+  }
+
+  async function hideChatMessageForSelf(messageId: string) {
+    if (!token || !chat) {
+      return;
+    }
+
+    try {
+      await api.hideMessageForSelf(token, chat.connection.id, messageId);
+      const payload = await api.loadChat(token, chat.connection.id);
+      setChat(payload);
+      setMessageContextMenu(null);
+      showNotice(locale === 'zh' ? '成功：已仅对你删除消息。' : 'Success! Message deleted for you.', 'success');
+    } catch (error) {
+      showNotice(formatErrorMessage(error));
     }
   }
 
@@ -2176,10 +2217,10 @@ export default function MarketMvpApp() {
     const lastSeenHours = formatLastSeenHours(otherProfile?.presence?.lastSeenAt);
 
     return (
-      <div className="min-h-screen bg-[#F7F4EF] text-[#1A1208]">
+      <div className="h-screen overflow-hidden bg-[#F7F4EF] text-[#1A1208]" onClick={() => setMessageContextMenu(null)}>
         <AppHeader copy={copy} locale={locale} onToggleLocale={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))} onSignOut={signOut} onLogoClick={() => setScreen('browse')} onProfileClick={openOwnProfilePage} onConnectionsClick={() => setScreen('connections')} currentScreen={copy.chat} />
-        <div className="grid min-h-[calc(100vh-72px)] lg:grid-cols-[320px_1fr]">
-          <div className="border-r border-[#D8D0C4] bg-white p-5 overflow-y-auto">
+        <div className="grid h-[calc(100vh-72px)] overflow-hidden lg:grid-cols-[320px_1fr]">
+          <div className="min-h-0 overflow-y-auto border-r border-[#D8D0C4] bg-white p-5">
             <button onClick={() => setScreen('connections')} className="mb-5 inline-flex items-center gap-2 text-sm text-[#5A5248]">
               <ArrowLeft size={16} /> {locale === 'zh' ? '返回连接页' : 'Back to connections'}
             </button>
@@ -2228,7 +2269,7 @@ export default function MarketMvpApp() {
               </div>
             ) : null}
           </div>
-          <div className="flex min-h-0 flex-col">
+          <div className="flex min-h-0 flex-col overflow-hidden">
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
               {(chat.typingUserIds?.length ?? 0) > 0 ? (
                 <div className="text-xs text-[#7A6E62]">
@@ -2240,6 +2281,11 @@ export default function MarketMvpApp() {
                   key={message.id}
                   message={message}
                   mine={message.senderUserId === session?.user.id}
+                  locale={locale}
+                  onContextMenu={(event, id) => {
+                    event.preventDefault();
+                    setMessageContextMenu({ messageId: id, x: event.clientX, y: event.clientY });
+                  }}
                 />
               ))}
             </div>
@@ -2295,6 +2341,28 @@ export default function MarketMvpApp() {
             </div>
           </div>
         </div>
+        {messageContextMenu ? (
+          <div
+            className="fixed z-50 min-w-40 rounded-lg border border-[#D8D0C4] bg-white p-1 shadow-xl"
+            style={{ left: messageContextMenu.x, top: messageContextMenu.y }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full rounded-md px-3 py-2 text-left text-sm text-[#B91C1C] hover:bg-[#FFF5F5]"
+              onClick={() => void deleteChatMessage(messageContextMenu.messageId)}
+            >
+              {locale === 'zh' ? '删除消息（双方）' : 'Delete message (for both)'}
+            </button>
+            <button
+              type="button"
+              className="mt-1 w-full rounded-md px-3 py-2 text-left text-sm text-[#5A5248] hover:bg-[#F7F4EF]"
+              onClick={() => void hideChatMessageForSelf(messageContextMenu.messageId)}
+            >
+              {locale === 'zh' ? '仅对我删除' : 'Delete message (for myself)'}
+            </button>
+          </div>
+        ) : null}
         {notice ? <Toast notice={notice} /> : null}
       </div>
     );
@@ -2584,16 +2652,40 @@ function ConfirmModal({ title, description, cancelLabel, confirmLabel, onCancel,
   );
 }
 
-function MessageBubble({ message, mine }: { message: MessageRecord; mine: boolean }) {
+function formatMessageTimestamp(createdAt: string, locale: Locale) {
+  const date = new Date(createdAt);
+  if (!Number.isFinite(date.getTime())) {
+    return createdAt;
+  }
+
+  return new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function MessageBubble({ message, mine, locale, onContextMenu }: { message: MessageRecord; mine: boolean; locale: Locale; onContextMenu: (event: MouseEvent<HTMLDivElement>, messageId: string) => void }) {
+  const timestamp = formatMessageTimestamp(message.createdAt, locale);
+
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-xl rounded-2xl px-4 py-3 text-sm leading-7 ${mine ? 'bg-[#A87C1A] text-white' : 'border border-[#D8D0C4] bg-white text-[#1A1208]'}`}>
+      <div
+        className={`max-w-xl rounded-2xl px-4 py-3 text-sm leading-7 ${mine ? 'bg-[#A87C1A] text-white' : 'border border-[#D8D0C4] bg-white text-[#1A1208]'}`}
+        title={timestamp}
+        onContextMenu={(event) => onContextMenu(event, message.id)}
+      >
         {message.messageType === 'image' && message.imageDataUrl ? (
           <a href={message.imageDataUrl} target="_blank" rel="noreferrer">
             <img src={message.imageDataUrl} alt="chat attachment" className="mb-2 max-h-72 rounded-xl object-cover" />
           </a>
         ) : null}
         {message.text ? <div>{message.text}</div> : null}
+        <div className={`mt-1 text-[10px] ${mine ? 'text-[#F3E6C7]' : 'text-[#8A8070]'} opacity-0 transition-opacity hover:opacity-100`}>
+          {timestamp}
+        </div>
       </div>
     </div>
   );

@@ -31,8 +31,13 @@ async function listMessages(connectionId, userId) {
 
   await withState(async () => undefined);
   const state = getState();
+  const hiddenMessageIds = new Set(
+    (state.hiddenMessages ?? [])
+      .filter((entry) => entry.userId === userId && entry.connectionId === connectionId)
+      .map((entry) => entry.messageId),
+  );
   const messages = state.messages
-    .filter((message) => message.connectionId === connectionId)
+    .filter((message) => message.connectionId === connectionId && !hiddenMessageIds.has(message.id))
     .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
   return {
@@ -127,4 +132,72 @@ async function setTypingState(connectionId, userId, isTyping) {
   });
 }
 
-export { listMessages, sendMessage, setTypingState };
+async function deleteMessage(connectionId, messageId, userId) {
+  return withState(async (state) => {
+    const connection = state.connections.find((candidate) => candidate.id === connectionId);
+    if (!connection || connection.status !== 'approved') {
+      const error = new Error('CHAT_UNAVAILABLE');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const isParticipant = connection.requesterUserId === userId || connection.targetUserId === userId;
+    if (!isParticipant) {
+      const error = new Error('FORBIDDEN');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const index = state.messages.findIndex((candidate) => candidate.id === messageId && candidate.connectionId === connectionId);
+    if (index === -1) {
+      const error = new Error('MESSAGE_NOT_FOUND');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const [deleted] = state.messages.splice(index, 1);
+    state.hiddenMessages = (state.hiddenMessages ?? []).filter((entry) => entry.messageId !== deleted.id);
+    return { ok: true, message: deleted };
+  });
+}
+
+async function hideMessageForUser(connectionId, messageId, userId) {
+  return withState(async (state) => {
+    const connection = state.connections.find((candidate) => candidate.id === connectionId);
+    if (!connection || connection.status !== 'approved') {
+      const error = new Error('CHAT_UNAVAILABLE');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const isParticipant = connection.requesterUserId === userId || connection.targetUserId === userId;
+    if (!isParticipant) {
+      const error = new Error('FORBIDDEN');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const message = state.messages.find((candidate) => candidate.id === messageId && candidate.connectionId === connectionId) ?? null;
+    if (!message) {
+      const error = new Error('MESSAGE_NOT_FOUND');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    state.hiddenMessages ??= [];
+    const alreadyHidden = state.hiddenMessages.some((entry) => entry.userId === userId && entry.messageId === messageId);
+    if (!alreadyHidden) {
+      state.hiddenMessages.push({
+        id: createId('hidden_message'),
+        connectionId,
+        messageId,
+        userId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    return { ok: true };
+  });
+}
+
+export { deleteMessage, hideMessageForUser, listMessages, sendMessage, setTypingState };

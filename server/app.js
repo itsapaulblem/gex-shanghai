@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { approveConnection, cancelConnection, listConnections, rejectConnection, removeConnection, requestConnection } from './services/connections.js';
-import { listMessages, sendMessage, setTypingState } from './services/chat.js';
+import { deleteMessage, hideMessageForUser, listMessages, sendMessage, setTypingState } from './services/chat.js';
 import { login, register, requestPasswordReset, requestSignupOtp, resetPassword, resolveSession, updateLanguage, verifySignupOtp } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
 import { loadState, touchUserActivity } from './store.js';
@@ -356,6 +356,30 @@ async function handleApi(request, response) {
       const connectionId = url.pathname.split('/')[3];
       const body = await readBody(request);
       const result = await setTypingState(connectionId, currentUser.id, Boolean(body.isTyping));
+      sendJson(response, 200, result);
+      return;
+    }
+
+    if (request.method === 'DELETE' && url.pathname.match(/^\/api\/chats\/[^/]+\/messages\/[^/]+$/)) {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const [, , , connectionId, , messageId] = url.pathname.split('/');
+      const result = await deleteMessage(connectionId, messageId, currentUser.id);
+      sendJson(response, 200, result);
+      return;
+    }
+
+    if (request.method === 'POST' && url.pathname.match(/^\/api\/chats\/[^/]+\/messages\/[^/]+\/hide$/)) {
+      if (!currentUser) {
+        sendJson(response, 401, { error: 'UNAUTHORIZED' });
+        return;
+      }
+
+      const [, , , connectionId, , messageId] = url.pathname.split('/');
+      const result = await hideMessageForUser(connectionId, messageId, currentUser.id);
       sendJson(response, 200, result);
       return;
     }

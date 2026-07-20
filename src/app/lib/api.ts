@@ -134,4 +134,6 @@ export const api = {
   loadChat: (token: string, connectionId: string) => requestJson<{ connection: ConnectionRecord; messages: MessageRecord[]; typingUserIds?: string[] }>(`/api/chats/${connectionId}`, {}, token),
   sendMessage: (token: string, connectionId: string, payload: { text?: string; imageDataUrl?: string | null }) => requestJson<{ message: MessageRecord }>(`/api/chats/${connectionId}/messages`, { method: 'POST', body: JSON.stringify(payload) }, token),
   setTyping: (token: string, connectionId: string, isTyping: boolean) => requestJson<RequestOkResponse>(`/api/chats/${connectionId}/typing`, { method: 'POST', body: JSON.stringify({ isTyping }) }, token),
+  deleteMessage: (token: string, connectionId: string, messageId: string) => requestJson<RequestOkResponse>(`/api/chats/${connectionId}/messages/${messageId}`, { method: 'DELETE' }, token),
+  hideMessageForSelf: (token: string, connectionId: string, messageId: string) => requestJson<RequestOkResponse>(`/api/chats/${connectionId}/messages/${messageId}/hide`, { method: 'POST' }, token),
 };

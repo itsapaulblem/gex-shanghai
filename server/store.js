@@ -239,6 +239,7 @@ function seedState() {
     ],
     connections: [],
     messages: [],
+    hiddenMessages: [],
     typingStates: [],
   };
 }
@@ -261,6 +262,7 @@ async function loadState() {
       state.profiles ??= [];
       state.connections ??= [];
       state.messages ??= [];
+      state.hiddenMessages ??= [];
       state.typingStates ??= [];
 
       const invalidUserIds = new Set(
