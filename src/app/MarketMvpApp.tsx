@@ -1580,7 +1580,7 @@ export default function MarketMvpApp() {
                   <div className="mt-7 rounded-xl border border-[#F5C4C5] bg-[#FEF0F0] px-4 py-3">
                     <div className="text-sm font-semibold text-[#8F1010]">
                       {locale === 'zh'
-                        ? `当前活跃家长 ${marketingStats.activeParents} 人 · 今日连接 ${marketingStats.connectionsToday} 对 · 24小时新增档案 ${marketingStats.newProfiles24h} 份`
+                          ? `目前有 ${marketingStats.activeParents} 位家长在线 · 今日配对 ${marketingStats.connectionsToday} 位用户 · 每 24 小时新增 ${marketingStats.newProfiles24h} 个新用户资料`
                         : `${marketingStats.activeParents} active parents · ${marketingStats.connectionsToday} connections today · ${marketingStats.newProfiles24h} new profiles in 24h.`}
                     </div>
                   </div>
