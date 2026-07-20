@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { api, type ConnectionRecord, type Locale, type MessageRecord, type ProfileRecord, type SessionRecord } from './lib/api';
+import { ImageWithFallback } from './components/figma/ImageWithFallback';
 
 type Screen = 'auth' | 'forgot-password' | 'reset-password' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
 type AuthMode = 'login' | 'register';
@@ -119,8 +120,8 @@ const COPY: Record<Locale, Copy> = {
   zh: {
     appName: '上海人民公园相亲角',
     subtitle: '线上网站',
-    authTitle: '为孩子寻得合适良缘',
-    authDescription: '以家庭责任为起点，帮助孩子进入更稳妥的婚配路径。登录后先完善档案，再浏览、连接与私聊。',
+    authTitle: '尽为父母之责，为子女择良缘',
+    authDescription: '本平台不是替代人民公园相亲角，而是其线上延展：延续同样的征婚格式与家长主导方式，在更大范围内完成更充分的比较与选择。',
     register: '注册',
     login: '登录',
     email: '邮箱',
@@ -174,8 +175,8 @@ const COPY: Record<Locale, Copy> = {
   en: {
     appName: 'Shanghai People’s Park Marriage Market',
     subtitle: 'Online website',
-    authTitle: 'Find a Match, Build a Future',
-    authDescription: 'Turn family responsibility into lasting outcomes: more compatible profiles, stronger family cohesion, and a better chance at a stable match.',
+    authTitle: 'Fulfill Parental Duty, Secure a Good Match',
+    authDescription: 'This platform is not a replacement for the weekend market. It is an extension of the weekend market at a larger and accessible scale.',
     register: 'Register',
     login: 'Sign in',
     email: 'Email',
@@ -735,6 +736,7 @@ export default function MarketMvpApp() {
   const [pendingImageName, setPendingImageName] = useState('');
   const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  const [marketingStats, setMarketingStats] = useState({ activeParents: 0, connectionsToday: 0, newProfiles24h: 0 });
   const [removeConnectionConfirm, setRemoveConnectionConfirm] = useState<{ connectionId: string; step: 1 | 2 } | null>(null);
   const [filters, setFilters] = useState({
     search: '',
@@ -951,6 +953,42 @@ export default function MarketMvpApp() {
   useEffect(() => {
     setBrowsePage(1);
   }, [filters.search, filters.gender, filters.ageRange, filters.heightRange, filters.minEducation, filters.salaryRange, filters.sort]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    async function pullMetrics() {
+      try {
+        const response = await fetch('/api/metrics/public');
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        if (disposed) {
+          return;
+        }
+
+        setMarketingStats({
+          activeParents: Number(payload.activeParents ?? 0),
+          connectionsToday: Number(payload.connectionsToday ?? 0),
+          newProfiles24h: Number(payload.newProfiles24h ?? 0),
+        });
+      } catch {
+        // Keep last known metrics if polling fails.
+      }
+    }
+
+    void pullMetrics();
+    const timer = window.setInterval(() => {
+      void pullMetrics();
+    }, 10000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (screen !== 'chat' || !token || !chat) {
@@ -1471,7 +1509,9 @@ export default function MarketMvpApp() {
   const inputClass = 'w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-base outline-none focus:border-[#A87C1A]';
   const passwordInputClass = `${inputClass} pr-12`;
 
-  function renderAuthScaffold(cardContent: ReactNode, heading = copy.authTitle, description = copy.authDescription) {
+  function renderAuthScaffold(cardContent: ReactNode, heading = copy.authTitle, description = copy.authDescription, mode: 'default' | 'signup-ad' = 'default') {
+    const isSignupAd = mode === 'signup-ad';
+
     return (
       <div className="relative min-h-screen bg-[#F7F4EF] text-[#1A1208]">
         <button
@@ -1486,47 +1526,103 @@ export default function MarketMvpApp() {
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#B5272A] text-white font-serif text-lg font-bold">缘</div>
                 <div>
-                  <div className="font-serif text-lg font-semibold">{copy.appName}</div>
-                  <div className="text-[10px] font-mono text-[#7A6E62]">{copy.subtitle}</div>
+                  <div className="font-serif text-2xl font-semibold leading-tight">{copy.appName}</div>
+                  <div className="mt-0.5 text-sm font-mono text-[#7A6E62]">{copy.subtitle}</div>
                 </div>
               </div>
             </div>
 
             <div className="max-w-xl">
-              <div className="mb-4 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.22em] text-[#B5272A]">
-                <Sparkles size={14} /> {locale === 'zh' ? '责任撮合 · 以家为本' : 'Responsible matchmaking · family first'}
-              </div>
               <h1 className="font-serif text-5xl font-semibold leading-tight">{heading}</h1>
               <p className="mt-4 max-w-2xl text-base leading-8 text-[#5A5248]">{description}</p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                {[
-                  {
-                    icon: Shield,
-                    title: locale === 'zh' ? '匿名与隐私' : 'Privacy first',
-                    body: locale === 'zh' ? '档案默认不公开姓名与联系方式，只有双方同意后才开放聊天。' : 'Profiles stay anonymous until both sides agree to connect, then chat unlocks.',
-                  },
-                  {
-                    icon: Users,
-                    title: locale === 'zh' ? '家庭责任' : 'Family responsibility',
-                    body: locale === 'zh' ? '把“为孩子寻良缘”变成可执行的家庭行动。' : 'Turn the duty to guide a child toward marriage into a clear, practical step.',
-                  },
-                  {
-                    icon: Sparkles,
-                    title: locale === 'zh' ? '规模与结果' : 'Scale with outcomes',
-                    body: locale === 'zh' ? '用更多活跃档案提高匹配机会，争取更稳妥的结果。' : 'A larger active pool means more choices, stronger competition, and better long-term outcomes.',
-                  },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Card key={item.title} className="border-[#E8D49A] bg-[#FFF9E8] p-4">
-                      <Icon className="mb-3 text-[#B5272A]" size={18} />
-                      <div className="text-base font-semibold">{item.title}</div>
-                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">{item.body}</div>
+              {isSignupAd ? (
+                <>
+                  <div className="mt-6 text-sm font-semibold text-[#1A1208]">
+                    {locale === 'zh' ? '核心价值汇聚于一处' : 'All these benefits in one place.'}
+                  </div>
+
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <Card className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                      <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '家庭稳定' : 'Family Stability'}</div>
+                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">
+                        {locale === 'zh'
+                          ? '匹配度更高的婚配关系更有利于长期家庭秩序与日常协作。'
+                          : 'A better spouse match supports long-term household stability and stronger daily cooperation.'}
+                      </div>
                     </Card>
-                  );
-                })}
-              </div>
+                    <Card className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                      <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '代际互助' : 'Intergenerational Support'}</div>
+                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">
+                        {locale === 'zh'
+                          ? '合适伴侣带来的家庭融合，有助于父母与子女在关键阶段形成互助网络。'
+                          : 'The right marriage strengthens family cohesion and improves support across generations.'}
+                      </div>
+                    </Card>
+                    <Card className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                      <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '长期连续性' : 'Long-term Continuity'}</div>
+                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">
+                        {locale === 'zh'
+                          ? '稳健婚配为后续家庭发展、育儿与照护安排奠定更可持续的基础。'
+                          : 'A strong spouse match supports durable planning for future caregiving and child-rearing needs.'}
+                      </div>
+                    </Card>
+                    <Card className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                      <div className="text-sm font-semibold text-[#1A1208]">{locale === 'zh' ? '共同成长' : 'Mutual Growth'}</div>
+                      <div className="mt-1 text-sm leading-7 text-[#5A5248]">
+                        {locale === 'zh'
+                          ? '价值观更契合的婚配关系，往往带来更稳定的情绪支持与人生协同。'
+                          : 'Value-aligned marriages often produce stronger emotional support and better long-term life alignment.'}
+                      </div>
+                    </Card>
+                  </div>
+
+                  <div className="mt-7 rounded-xl border border-[#F5C4C5] bg-[#FEF0F0] px-4 py-3">
+                    <div className="text-sm font-semibold text-[#8F1010]">
+                      {locale === 'zh'
+                        ? `当前活跃家长 ${marketingStats.activeParents} 人 · 今日连接 ${marketingStats.connectionsToday} 对 · 24小时新增档案 ${marketingStats.newProfiles24h} 份`
+                        : `${marketingStats.activeParents} active parents · ${marketingStats.connectionsToday} connections today · ${marketingStats.newProfiles24h} new profiles in 24h.`}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-hidden rounded-xl border border-[#E8D49A] bg-white">
+                    <ImageWithFallback
+                      src="/live-ticker-family.jpg"
+                      alt={locale === 'zh' ? '家庭合影' : 'family portrait'}
+                      className="h-56 w-full object-cover sm:h-64"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                  {[
+                    {
+                      icon: Shield,
+                      title: locale === 'zh' ? '匿名与隐私' : 'Privacy first',
+                      body: locale === 'zh' ? '档案默认不公开姓名与联系方式，只有双方同意后才开放聊天。' : 'Profiles stay anonymous until both sides agree to connect, then chat unlocks.',
+                    },
+                    {
+                      icon: Users,
+                      title: locale === 'zh' ? '家庭责任' : 'Family responsibility',
+                      body: locale === 'zh' ? '把“为孩子寻良缘”变成可执行的家庭行动。' : 'Turn the duty to guide a child toward marriage into a clear, practical step.',
+                    },
+                    {
+                      icon: Sparkles,
+                      title: locale === 'zh' ? '规模与结果' : 'Scale with outcomes',
+                      body: locale === 'zh' ? '用更多活跃档案提高匹配机会，争取更稳妥的结果。' : 'A larger active pool means more choices, stronger competition, and better long-term outcomes.',
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Card key={item.title} className="border-[#E8D49A] bg-[#FFF9E8] p-4">
+                        <Icon className="mb-3 text-[#B5272A]" size={18} />
+                        <div className="text-base font-semibold">{item.title}</div>
+                        <div className="mt-1 text-sm leading-7 text-[#5A5248]">{item.body}</div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1633,6 +1729,9 @@ export default function MarketMvpApp() {
                 </button>
               </div>
       </>,
+      copy.authTitle,
+      copy.authDescription,
+      'signup-ad',
     );
   }
 

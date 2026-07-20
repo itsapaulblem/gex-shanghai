@@ -6,7 +6,7 @@ import { approveConnection, cancelConnection, listConnections, rejectConnection,
 import { deleteMessage, hideMessageForUser, listMessages, sendMessage, setTypingState } from './services/chat.js';
 import { login, register, requestPasswordReset, requestSignupOtp, resetPassword, resolveSession, updateLanguage, verifySignupOtp } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
-import { loadState, touchUserActivity } from './store.js';
+import { getState, loadState, touchUserActivity } from './store.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,6 +133,27 @@ async function handleApi(request, response) {
 
     if (request.method === 'GET' && url.pathname === '/api/health') {
       sendJson(response, 200, { ok: true });
+      return;
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/metrics/public') {
+      const state = getState();
+      const now = Date.now();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const startOfTodayMs = startOfToday.getTime();
+
+      const activeParents = state.users.length;
+      const connectionsToday = state.connections.filter((connection) => {
+        const updatedAtMs = new Date(connection.updatedAt ?? connection.createdAt).getTime();
+        return connection.status === 'approved' && Number.isFinite(updatedAtMs) && updatedAtMs >= startOfTodayMs;
+      }).length;
+      const newProfiles24h = state.profiles.filter((profile) => {
+        const createdAtMs = new Date(profile.createdAt).getTime();
+        return Number.isFinite(createdAtMs) && now - createdAtMs <= 24 * 60 * 60 * 1000;
+      }).length;
+
+      sendJson(response, 200, { activeParents, connectionsToday, newProfiles24h });
       return;
     }
 
