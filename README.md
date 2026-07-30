@@ -3,6 +3,10 @@
 
   This website is an online extension of the Shanghai People's Park marriage market. It helps parents and families create profiles, browse matches, request connections, and chat after approval.
 
+  ## Live Deployment (AWS Elastic Beanstalk)
+
+  Production URL: https://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com
+
   ## What The Website Offers
 
   - Bilingual interface (Chinese first, with English toggle).
