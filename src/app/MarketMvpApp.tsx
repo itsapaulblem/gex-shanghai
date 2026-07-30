@@ -1329,18 +1329,23 @@ export default function MarketMvpApp() {
       return;
     }
 
+    const text = messageText.trim();
+    const imageDataUrl = pendingImageDataUrl;
+
+    // Clear UI immediately so the send feels instant
+    setMessageText('');
+    setPendingImageDataUrl(null);
+    setPendingImageName('');
+    setChatTypingActive(false);
+
     try {
-      await api.sendMessage(token, chat.connection.id, {
-        text: messageText.trim(),
-        imageDataUrl: pendingImageDataUrl,
+      const { message } = await api.sendMessage(token, chat.connection.id, {
+        text,
+        imageDataUrl,
       });
-      const payload = await api.loadChat(token, chat.connection.id);
-      setChat(payload);
-      setMessageText('');
-      setPendingImageDataUrl(null);
-      setPendingImageName('');
-      setChatTypingActive(false);
-      await api.setTyping(token, chat.connection.id, false);
+      // Append the returned message directly — no second loadChat round-trip needed
+      setChat((current) => current ? { ...current, messages: [...current.messages, message] } : current);
+      void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
     } catch (error) {
       showNotice(formatErrorMessage(error));
     }
@@ -1441,8 +1446,7 @@ export default function MarketMvpApp() {
   function openOwnProfilePage() {
     if (!ownProfile) {
       showNotice(locale === 'zh' ? '请先创建个人档案。' : 'Please create a profile first.');
-      populateProfileForm(null);
-      setSetupStep(1);
+      // Stay on setup without resetting form or step — user may be mid-creation
       setScreen('setup');
       return;
     }
@@ -1560,7 +1564,7 @@ export default function MarketMvpApp() {
       <div className="relative min-h-screen bg-[#F7F4EF] text-[#1A1208]">
         <button
           onClick={() => setLocale((current) => (current === 'zh' ? 'en' : 'zh'))}
-          className="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] shadow-sm"
+          className="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] shadow-sm hover:bg-[#FFF3D0]"
         >
           <Globe2 size={14} /> {copy.language}
         </button>
@@ -2104,7 +2108,7 @@ export default function MarketMvpApp() {
                   <button
                     onClick={() => setSetupStep((current) => Math.max(1, current - 1))}
                     disabled={setupStep === 1}
-                    className="inline-flex items-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] disabled:opacity-40"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF] disabled:opacity-40"
                   >
                     <ArrowLeft size={16} /> {locale === 'zh' ? '上一步' : 'Previous step'}
                   </button>
@@ -2189,7 +2193,7 @@ export default function MarketMvpApp() {
                       onClick={() => {
                         void openChat(detailApprovedConnection.id);
                       }}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#1A1208] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2D2419]"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0D9488] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#0F766E]"
                     >
                       <MessageSquare size={16} /> {locale === 'zh' ? '打开聊天' : 'Open chat'}
                     </button>
@@ -2716,19 +2720,19 @@ function AppHeader({ copy, locale, onToggleLocale, onSignOut, onLogoClick, onPro
         )}
         <div className="flex items-center gap-2">
           {onConnectionsClick ? (
-            <button onClick={onConnectionsClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
+            <button onClick={onConnectionsClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] hover:bg-[#FFF3D0]">
               {copy.myConnections}
             </button>
           ) : null}
           {onProfileClick ? (
-            <button onClick={onProfileClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
+            <button onClick={onProfileClick} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] hover:bg-[#FFF3D0]">
               {copy.myProfile}
             </button>
           ) : null}
-          <button onClick={onToggleLocale} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248]">
+          <button onClick={onToggleLocale} className="rounded-full border border-[#E8D49A] bg-[#FFF9E8] px-3 py-2 text-xs text-[#5A5248] hover:bg-[#FFF3D0]">
             <Globe2 className="mr-2 inline-block" size={14} /> {locale === 'zh' ? 'English' : '中文'}
           </button>
-          <button onClick={onSignOut} className="rounded-full border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">
+          <button onClick={onSignOut} className="rounded-full border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248] hover:bg-[#F7F4EF]">
             {copy.signOut}
           </button>
         </div>
@@ -2776,10 +2780,10 @@ function ConnectionItem({ connection, locale, onApprove, onReject, onViewProfile
       </div>
       <div className="mt-3 flex flex-wrap gap-2">{profile.traits.slice(0, 3).map((trait) => <Badge key={trait}>{trait}</Badge>)}</div>
       <div className="mt-4 flex gap-2">
-        {onViewProfile ? <button onClick={() => void onViewProfile(profile.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248]">{locale === 'zh' ? '查看完整档案' : 'View full profile'}</button> : null}
-        {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
+        {onViewProfile ? <button onClick={() => void onViewProfile(profile.id)} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-3 py-2 text-xs text-[#5A5248] hover:bg-[#F7F4EF]">{locale === 'zh' ? '查看完整档案' : 'View full profile'}</button> : null}
+        {onApprove ? <button onClick={() => void onApprove(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white hover:bg-[#256F3C]">{locale === 'zh' ? '同意' : 'Approve'}</button> : null}
         {onReject ? <button onClick={() => void onReject(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '拒绝' : 'Reject'}</button> : null}
-        {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
+        {onCancel && connection.direction === 'outgoing' && connection.status === 'pending' ? <button onClick={() => void onCancel(connection.id)} className="flex-1 rounded-lg border border-[#D77A7A] bg-[#FFF5F5] px-3 py-2 text-xs text-[#B91C1C] hover:bg-[#FFECEC]">{locale === 'zh' ? '取消申请' : 'Cancel request'}</button> : null}
         {onOpenChat ? <button onClick={() => void onOpenChat(connection.id)} className="flex-1 rounded-lg bg-[#2C8A4A] px-3 py-2 text-xs font-medium text-white hover:bg-[#256F3C]">{locale === 'zh' ? '进入私聊' : 'Open chat'}</button> : null}
         {onRemoveConnection && connection.status === 'approved' ? <button onClick={() => onRemoveConnection(connection.id)} className="flex-1 rounded-lg bg-[#B5272A] px-3 py-2 text-xs font-medium text-white hover:bg-[#9E2224]">{locale === 'zh' ? '移除连接' : 'Remove connection'}</button> : null}
       </div>
@@ -2794,7 +2798,7 @@ function ConfirmModal({ title, description, cancelLabel, confirmLabel, onCancel,
         <div className="text-base font-semibold text-[#1A1208]">{title}</div>
         <p className="mt-2 text-sm leading-7 text-[#5A5248]">{description}</p>
         <div className="mt-5 flex gap-3">
-          <button onClick={onCancel} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-4 py-2.5 text-sm font-medium text-[#5A5248]">
+          <button onClick={onCancel} className="flex-1 rounded-lg border border-[#D8D0C4] bg-white px-4 py-2.5 text-sm font-medium text-[#5A5248] hover:bg-[#F7F4EF]">
             {cancelLabel}
           </button>
           <button onClick={onConfirm} className="flex-1 rounded-lg bg-[#B5272A] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#9E2224]">

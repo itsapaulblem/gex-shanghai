@@ -55,7 +55,7 @@
       "passwordHash": "fe30667ddb2bb80c57ae72ed857d664cb8fe0d7988ad6769f60ae9aced8b893d",
       "createdAt": "2026-07-20T08:34:20.877Z",
       "language": "en",
-      "lastSeenAt": "2026-07-20T11:14:51.080Z"
+      "lastSeenAt": "2026-07-30T04:27:45.342Z"
     },
     {
       "id": "user_00d3853f",
@@ -65,6 +65,15 @@
       "createdAt": "2026-07-20T11:14:23.030Z",
       "language": "en",
       "lastSeenAt": "2026-07-20T11:14:33.743Z"
+    },
+    {
+      "id": "user_ce242e5f",
+      "email": "fcewfwefd@vcds.com",
+      "passwordSalt": "10687518a7a6dc9b0d734a339e5f721b",
+      "passwordHash": "b080fe5cc5bdc9f1163dc6ada187adff244cd522694985bb24ad59c6adcfca94",
+      "createdAt": "2026-07-30T04:28:02.265Z",
+      "language": "en",
+      "lastSeenAt": "2026-07-30T04:28:02.357Z"
     }
   ],
   "sessions": [
@@ -77,6 +86,11 @@
       "token": "51b0229d-d891-4039-8840-6e4499c2ca5c",
       "userId": "user_00d3853f",
       "createdAt": "2026-07-20T11:14:23.030Z"
+    },
+    {
+      "token": "a8ef31e8-37cd-406e-89f4-9034c2cfef59",
+      "userId": "user_ce242e5f",
+      "createdAt": "2026-07-30T04:28:02.265Z"
     }
   ],
   "passwordResetTokens": [],
@@ -165,7 +179,26 @@
       "updatedAt": "2026-07-20T11:14:41.781Z"
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "id": "message_7b446f80",
+      "connectionId": "connection_65bac1b5",
+      "senderUserId": "user_d5cfb89c",
+      "text": "hellooo",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-07-30T04:27:42.907Z"
+    },
+    {
+      "id": "message_0ee4750f",
+      "connectionId": "connection_65bac1b5",
+      "senderUserId": "user_d5cfb89c",
+      "text": "dscwe",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-07-30T04:27:45.014Z"
+    }
+  ],
   "hiddenMessages": [],
   "typingStates": []
 }
