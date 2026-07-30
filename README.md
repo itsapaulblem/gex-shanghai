@@ -1,85 +1,70 @@
 
-  # Shanghainese Marriage Market Website
+  # Shanghai People's Park Marriage Market Website
 
-  This is a code bundle for Shanghainese Marriage Market Website. The original project is available at https://www.figma.com/design/2wmtlaeNdoZDN6Au5uWc1H/Shanghainese-Marriage-Market-Website.
+  This website is an online extension of the Shanghai People's Park marriage market. It helps parents and families create profiles, browse matches, request connections, and chat after approval.
 
-  ## Running the code
+  ## What The Website Offers
 
-  Run `npm i` to install the dependencies.
+  - Bilingual interface (Chinese first, with English toggle).
+  - Account system with sign in, registration, and email verification.
+  - Password reset by email.
+  - Profile creation for your child (basic details and matching information).
+  - Profile browsing and keyword search.
+  - Connection request workflow (send, receive, approve, reject, cancel, remove).
+  - Private chat for approved connections.
 
-  Run `npm run api` in one terminal to start the local backend on port 3001.
+  ## How To Use The Website
 
-  Run `npm run dev` in a second terminal to start the Vite frontend.
+  1. Open the website and choose your language in the top-left area.
+  2. Sign in if you already have an account.
+  3. If you are new, create an account:
+  - Enter your email and password.
+  - Request the email OTP code.
+  - Enter the 6-digit OTP to verify and finish registration.
+  4. If you forgot your password, use Forgot Password and follow the reset email link.
 
-  The site is Chinese-first, and the UI includes an English translation toggle.
+  ## Complete Your Profile First
 
-  ## Deploy With Docker + AWS Elastic Beanstalk
+  Before full access is unlocked, create your child profile.
 
-  This project can be deployed as a single Docker container. The Node server serves both the built frontend (`dist/`) and API routes.
+  1. Go to My Profile.
+  2. Fill in all required fields carefully.
+  3. Save your profile.
 
-  ### Prerequisites
+  After your profile is complete, you can browse other profiles, send requests, and use chat features.
 
-  - AWS account
-  - Elastic Beanstalk CLI installed (`eb --version`)
-  - AWS CLI configured (`aws configure`)
-  - Docker Desktop running locally
+  ## Browse And Search Matches
 
-  ### Password Reset Email Setup
+  1. Go to Browse.
+  2. Use the search bar to filter by keywords such as age, city, industry, school, or hukou.
+  3. Open profile cards to review details.
 
-  The forgot-password flow configured. Set these environment variables before running the server or deploying:
+  ## Manage Connections
 
-  ```bash
-  SMTP_HOST=smtp.your-provider.com
-  SMTP_PORT=587
-  SMTP_SECURE=false
-  SMTP_USER=your-smtp-user
-  SMTP_PASS=your-smtp-password
-  SMTP_FROM="Gex Shanghai <no-reply@yourdomain.com>"
-  APP_BASE_URL=https://your-deployed-site-url
-  ```
+  Use My Connections to manage your matchmaking pipeline.
 
-  If SMTP is not configured, the server logs the reset link to the console instead of sending the email.
+  - Incoming: Requests received from others.
+  - Outgoing: Requests you sent.
+  - Connected: Requests that were approved.
 
-  ### 1) Test Container Locally
+  Available actions include:
 
-  Build and run:
+  - Send connection request.
+  - Approve or reject incoming request.
+  - Cancel a pending outgoing request.
+  - Remove an approved connection.
 
-  ```bash
-  docker build -t gex-shanghai .
-  docker run --rm -p 8080:8080 gex-shanghai
-  ```
+  ## Chat With Approved Connections
 
-  Open `http://localhost:8080`.
+  Once a connection is approved:
 
-  ### 2) Initialize Elastic Beanstalk (one time)
+  1. Open Chat Rooms.
+  2. Select a connected profile.
+  3. Send private messages to coordinate next steps.
 
-  ```bash
-  eb init gex-shanghai --platform "Docker running on 64bit Amazon Linux 2023" --region us-east-1
-  ```
+  ## Helpful Notes
 
-  You can change region if needed.
-
-  ### 3) Create Environment (one time)
-
-  ```bash
-  eb create gex-shanghai-prod --single --instance_type t3.micro
-  eb setenv NODE_ENV=production
-  ```
-
-  `--single` uses one instance and is cheaper for school projects.
-
-  ### 4) Deploy Updates
-
-  ```bash
-  eb deploy gex-shanghai-prod
-  ```
-
-  ### 5) Get The Public Link
-
-  ```bash
-  eb status gex-shanghai-prod
-  eb open gex-shanghai-prod
-  ```
-
-  The environment URL shown by `eb status` is the link you can give your teacher.
+  - Keep your profile accurate and up to date to improve match quality.
+  - Use respectful, clear communication in chat.
+  - If sign-in fails, verify both email and password and try again.
   
