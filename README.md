@@ -5,7 +5,7 @@
 
   ## Live Deployment (AWS Elastic Beanstalk)
 
-  Production URL: https://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com
+  Production URL: http://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com/
 
   ## What The Website Offers
 
