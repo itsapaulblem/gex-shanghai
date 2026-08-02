@@ -1629,7 +1629,7 @@ export default function MarketMvpApp() {
                     <div className="text-sm font-semibold text-[#8F1010]">
                       {locale === 'zh'
                           ? `目前有 ${marketingStats.activeParents} 位家长在线 · 今日配对 ${marketingStats.connectionsToday} 位用户 · 每 24 小时新增 ${marketingStats.newProfiles24h} 个新用户资料`
-                        : `${marketingStats.activeParents} active parents · ${marketingStats.connectionsToday} connections today · ${marketingStats.newProfiles24h} new profiles in 24h.`}
+                        : `${marketingStats.activeParents} active ${marketingStats.activeParents === 1 ? 'parent' : 'parents'} · ${marketingStats.connectionsToday} ${marketingStats.connectionsToday === 1 ? 'connection' : 'connections'} today · ${marketingStats.newProfiles24h} new ${marketingStats.newProfiles24h === 1 ? 'profile' : 'profiles'} in 24h.`}
                     </div>
                   </div>
 
@@ -2611,8 +2611,8 @@ export default function MarketMvpApp() {
             <div className="text-xs font-mono text-[#7A6E62]">{locale === 'zh' ? '浏览其他家长发布的匿名子女档案' : 'Browse anonymous child profiles posted by other parents'}</div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Badge tone="gold">{profiles.length} profiles</Badge>
-            <Badge tone="green">{incomingCount} {copy.incoming}</Badge>
+            <Badge tone="gold">{profiles.length} {locale === 'zh' ? '个档案' : (profiles.length === 1 ? 'profile' : 'profiles')}</Badge>
+            <Badge tone="green">{incomingCount} {locale === 'zh' ? copy.incoming : (incomingCount === 1 ? 'Incoming request' : 'Incoming requests')}</Badge>
             <Badge tone="default">{connectedCount} {copy.connected}</Badge>
           </div>
         </div>
@@ -2647,7 +2647,7 @@ export default function MarketMvpApp() {
                     <div>{locale === 'zh' ? `月收入: ${profile.income}` : `Monthly income: ${profile.income}`}</div>
                   </div>
                   <div className="mt-4 flex gap-2">
-                    <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248]">
+                    <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF] transition-colors">
                       {locale === 'zh' ? '查看详情' : 'View detail'}
                     </button>
                     <button

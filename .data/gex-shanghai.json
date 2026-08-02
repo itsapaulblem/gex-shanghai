@@ -55,7 +55,7 @@
       "passwordHash": "fe30667ddb2bb80c57ae72ed857d664cb8fe0d7988ad6769f60ae9aced8b893d",
       "createdAt": "2026-07-20T08:34:20.877Z",
       "language": "zh",
-      "lastSeenAt": "2026-08-02T02:08:46.384Z"
+      "lastSeenAt": "2026-08-02T02:18:41.415Z"
     },
     {
       "id": "user_00d3853f",
@@ -190,13 +190,13 @@
       "createdAt": "2026-07-30T04:27:42.907Z"
     },
     {
-      "id": "message_0ee4750f",
+      "id": "message_e4fc847b",
       "connectionId": "connection_65bac1b5",
       "senderUserId": "user_d5cfb89c",
-      "text": "dscwe",
+      "text": "test",
       "messageType": "text",
       "imageDataUrl": null,
-      "createdAt": "2026-07-30T04:27:45.014Z"
+      "createdAt": "2026-08-02T02:13:04.112Z"
     }
   ],
   "hiddenMessages": [],
