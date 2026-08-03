@@ -340,6 +340,34 @@ const HUKOU_PREFERENCE_OPTIONS = [
   { label: 'Open to non-Shanghai hukou / 接受非上海户籍', value: 'Open to non-Shanghai hukou' },
 ];
 
+const EDUCATION_OPTIONS = [
+  { zh: '高中及以下', en: 'High School or Below', value: '高中及以下' },
+  { zh: '大专', en: "Associate's Degree", value: '大专' },
+  { zh: '本科', en: "Bachelor's Degree", value: '本科' },
+  { zh: '硕士', en: "Master's Degree", value: '硕士' },
+  { zh: '博士', en: 'Doctorate (PhD)', value: '博士' },
+];
+
+const PROPERTY_OPTIONS = [
+  { zh: '有房', en: 'Own Property', value: '有房' },
+  { zh: '无房', en: 'No Property', value: '无房' },
+];
+
+const CAR_OPTIONS = [
+  { zh: '有车', en: 'Own Car', value: '有车' },
+  { zh: '无车', en: 'No Car', value: '无车' },
+];
+
+function bilingualLabel(option: { zh: string; en: string }, locale: string) {
+  return locale === 'zh' ? option.zh : option.en;
+}
+
+// Translate a stored Chinese value to English using a bilingual options list
+function translateStored(value: string | undefined | null, options: { zh: string; en: string; value: string }[], locale: string) {
+  if (!value || locale === 'zh') return value ?? '';
+  return options.find((o) => o.value === value)?.en ?? value;
+}
+
 const EDUCATION_LEVEL_OPTIONS = [
   { label: 'Any education', value: 'all' },
   { label: '大专', value: '大专' },
@@ -1945,7 +1973,7 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, education: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
-              {['大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
+              {EDUCATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{bilingualLabel(option, locale)}</option>)}
             </select>
           ) : fieldKey === 'income' ? (
             <select
@@ -1961,7 +1989,7 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, property: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
-              {['有房', '无房'].map((option) => <option key={option} value={option}>{option}</option>)}
+              {PROPERTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{bilingualLabel(option, locale)}</option>)}
             </select>
           ) : fieldKey === 'car' ? (
             <select
@@ -1969,7 +1997,7 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, car: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
-              {['有车', '无车'].map((option) => <option key={option} value={option}>{option}</option>)}
+              {CAR_OPTIONS.map((option) => <option key={option.value} value={option.value}>{bilingualLabel(option, locale)}</option>)}
             </select>
           ) : fieldKey === 'preferredAgeRange' ? (
             <select
@@ -1994,7 +2022,7 @@ export default function MarketMvpApp() {
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
               <option value="">{locale === 'zh' ? '不限' : 'No preference'}</option>
-              {['大专', '本科', '硕士', '博士'].map((option) => <option key={option} value={option}>{option}</option>)}
+              {EDUCATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{bilingualLabel(option, locale)}</option>)}
             </select>
           ) : fieldKey === 'hukouPreference' ? (
             <select
@@ -2154,7 +2182,7 @@ export default function MarketMvpApp() {
             <ArrowLeft size={16} /> {locale === 'zh' ? '返回列表' : 'Back to list'}
           </button>
           <div className="space-y-6">
-            <SectionLabel title={locale === 'zh' ? '概要 · Summary' : 'Summary'} />
+            <SectionLabel title={locale === 'zh' ? '概要' : 'Summary'} />
             <div className="space-y-4">
               <Card className="p-6">
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -2206,11 +2234,11 @@ export default function MarketMvpApp() {
                 <div className="rounded-2xl border border-[#D8D0C4] bg-white overflow-hidden">
                   {[
                     { label: locale === 'zh' ? '地区' : 'Location', value: locale === 'zh' ? `城市: ${selectedProfile.city} · 户籍: ${selectedProfile.hukou}` : `City: ${selectedProfile.city} · Hukou: ${selectedProfile.hukou}` },
-                    { label: locale === 'zh' ? '学历' : 'Education', value: locale === 'zh' ? `学历: ${selectedProfile.education} · 学校: ${selectedProfile.school}` : `Education: ${selectedProfile.education} · School: ${selectedProfile.school}` },
+                    { label: locale === 'zh' ? '学历' : 'Education', value: locale === 'zh' ? `学历: ${selectedProfile.education} · 学校: ${selectedProfile.school}` : `Education: ${translateStored(selectedProfile.education, EDUCATION_OPTIONS, locale)} · School: ${selectedProfile.school}` },
                     { label: locale === 'zh' ? '职业' : 'Work', value: locale === 'zh' ? `行业: ${selectedProfile.industry} · 职位: ${selectedProfile.jobTitle}` : `Industry: ${selectedProfile.industry} · Job: ${selectedProfile.jobTitle}` },
                     { label: locale === 'zh' ? '收入' : 'Income', value: locale === 'zh' ? `月收入: ${selectedProfile.income}` : `Monthly income: ${selectedProfile.income}` },
-                    { label: locale === 'zh' ? '房产' : 'Property', value: selectedProfile.property },
-                    { label: locale === 'zh' ? '车辆' : 'Vehicle', value: selectedProfile.car },
+                    { label: locale === 'zh' ? '房产' : 'Property', value: translateStored(selectedProfile.property, PROPERTY_OPTIONS, locale) },
+                    { label: locale === 'zh' ? '车辆' : 'Vehicle', value: translateStored(selectedProfile.car, CAR_OPTIONS, locale) },
                   ].map((item, index) => (
                     <div key={item.label} className={`flex items-center gap-3 px-4 py-2.5 ${index < 5 ? 'border-b border-[#EEE9E0]' : ''}`}>
                       <span className="text-[10px] font-mono text-[#7A6E62] w-12 flex-shrink-0">{item.label}</span>
@@ -2221,11 +2249,11 @@ export default function MarketMvpApp() {
               </Card>
             </div>
 
-            <SectionLabel title={locale === 'zh' ? '详细资料 · In Detail' : 'In Detail'} />
+            <SectionLabel title={locale === 'zh' ? '详细资料' : 'In Detail'} />
             <div className="space-y-4">
               <Card className="overflow-hidden">
                 <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
-                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '基本资料 · Basic Info' : 'Basic Info'}</span>
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '基本资料' : 'Basic Info'}</span>
                 </div>
                 <div className="divide-y divide-[#F0EBE1]">
                   {[
@@ -2247,11 +2275,11 @@ export default function MarketMvpApp() {
 
               <Card className="overflow-hidden">
                 <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
-                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '学历与职业 · Education & Career' : 'Education & Career'}</span>
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '学历与职业' : 'Education & Career'}</span>
                 </div>
                 <div className="divide-y divide-[#F0EBE1]">
                   {[
-                    [locale === 'zh' ? '最高学历' : 'Highest education', selectedProfile.education],
+                    [locale === 'zh' ? '最高学历' : 'Highest education', translateStored(selectedProfile.education, EDUCATION_OPTIONS, locale)],
                     [locale === 'zh' ? '大学 / 学校' : 'University / School', selectedProfile.school],
                     [locale === 'zh' ? '所学专业' : 'Major / Field of Study', selectedProfile.major],
                     [locale === 'zh' ? '职业行业' : 'Industry', selectedProfile.industry],
@@ -2268,7 +2296,7 @@ export default function MarketMvpApp() {
 
               <Card className="overflow-hidden">
                 <div className="border-b border-[#EEE9E0] bg-[#FAFAF8] px-5 py-3">
-                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '择偶要求 · Partner Preferences' : 'Partner Preferences'}</span>
+                  <span className="text-xs font-semibold text-[#1A1208]">{locale === 'zh' ? '择偶要求' : 'Partner Preferences'}</span>
                 </div>
                 <div className="divide-y divide-[#F0EBE1]">
                   {[
@@ -2407,11 +2435,11 @@ export default function MarketMvpApp() {
                       [locale === 'zh' ? '身高' : 'Height', `${otherProfile.height}cm`],
                       [locale === 'zh' ? '城市' : 'City', otherProfile.city],
                       [locale === 'zh' ? '户籍' : 'Hukou', otherProfile.hukou],
-                      [locale === 'zh' ? '学历' : 'Education', otherProfile.education],
+                      [locale === 'zh' ? '学历' : 'Education', translateStored(otherProfile.education, EDUCATION_OPTIONS, locale)],
                       [locale === 'zh' ? '行业' : 'Industry', otherProfile.industry],
                       [locale === 'zh' ? '收入' : 'Income', otherProfile.income],
-                      [locale === 'zh' ? '房产' : 'Property', otherProfile.property],
-                      [locale === 'zh' ? '车辆' : 'Vehicle', otherProfile.car],
+                      [locale === 'zh' ? '房产' : 'Property', translateStored(otherProfile.property, PROPERTY_OPTIONS, locale)],
+                      [locale === 'zh' ? '车辆' : 'Vehicle', translateStored(otherProfile.car, CAR_OPTIONS, locale)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-3 px-4 py-2.5">
                         <span className="text-[11px] font-mono text-[#7A6E62]">{label}</span>
@@ -2572,7 +2600,10 @@ export default function MarketMvpApp() {
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Min. Education / 最低学历</div>
               <select value={filters.minEducation} onChange={(event) => setFilters((current) => ({ ...current, minEducation: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                {EDUCATION_LEVEL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {[
+                { label: locale === 'zh' ? '不限学历' : 'Any education', value: 'all' },
+                ...EDUCATION_OPTIONS.map((o) => ({ label: bilingualLabel(o, locale), value: o.value })),
+              ].map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
             <label className="block">
