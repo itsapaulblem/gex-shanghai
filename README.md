@@ -1,74 +1,146 @@
 
-  # Shanghai People's Park Marriage Market Website
+# Shanghai People's Park Marriage Market Website
 
-  This website is an online extension of the Shanghai People's Park marriage market. It helps parents and families create profiles, browse matches, request connections, and chat after approval.
+This website is an online extension of the Shanghai People's Park marriage market. It is designed for parents and families to create a child profile, browse other profiles, send connection requests, and chat after both sides agree.
 
-  ## Live Deployment (AWS Elastic Beanstalk)
+## Live Website
 
-  Production URL: http://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com/
+- Production link: http://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com/
 
-  ## What The Website Offers
+## Who This Is For
 
-  - Bilingual interface (Chinese first, with English toggle).
-  - Account system with sign in, registration, and email verification.
-  - Password reset by email.
-  - Profile creation for your child (basic details and matching information).
-  - Profile browsing and keyword search.
-  - Connection request workflow (send, receive, approve, reject, cancel, remove).
-  - Private chat for approved connections.
+- Parents or family members helping a child look for a match.
+- Users who want a Chinese-first interface with an English toggle.
+- Users who want profile-based matching, approval-based connections, and private chat after approval.
 
-  ## How To Use The Website
+## Main Features
 
-  1. Open the website and choose your language in the top-left area.
-  2. Sign in if you already have an account.
-  3. If you are new, create an account:
-  - Enter your email and password.
-  - Request the email OTP code.
-  - Enter the 6-digit OTP to verify and finish registration.
-  4. If you forgot your password, use Forgot Password and follow the reset email link.
+- Account registration and sign in.
+- Email OTP verification during sign-up.
+- Forgot-password and reset-password flow.
+- Child profile creation and editing.
+- Profile browsing with filters and keyword search.
+- Incoming and outgoing connection request management.
+- Private chat for approved connections.
 
-  ## Complete Your Profile First
+## Quick Start
 
-  Before full access is unlocked, create your child profile.
+1. Open the live website.
+2. Choose your interface language from the top area.
+3. Register a new account or sign in to an existing account.
+4. Complete the child profile.
+5. Start browsing and sending connection requests.
 
-  1. Go to My Profile.
-  2. Fill in all required fields carefully.
-  3. Save your profile.
+## Account Registration
 
-  After your profile is complete, you can browse other profiles, send requests, and use chat features.
+1. Open the sign-in page.
+2. Switch to the registration flow.
+3. Enter your email address.
+4. Enter a password that meets the password rules shown in the app.
+5. Request the email OTP code.
+6. Enter the OTP code to verify the account.
+7. Finish registration and continue into the app.
 
-  ## Browse And Search Matches
+## Sign In
 
-  1. Go to Browse.
-  2. Use the search bar to filter by keywords such as age, city, industry, school, or hukou.
-  3. Open profile cards to review details.
+1. Open the website.
+2. Enter your email and password.
+3. Submit the form.
 
-  ## Manage Connections
+If your account already has a child profile, you will go into the main browsing flow. If not, the app sends you to profile setup first.
 
-  Use My Connections to manage your matchmaking pipeline.
+## Reset Your Password
 
-  - Incoming: Requests received from others.
-  - Outgoing: Requests you sent.
-  - Connected: Requests that were approved.
+1. Click Forgot Password.
+2. Enter the email address used for the account.
+3. Submit the reset request.
+4. Open the reset link sent to your email.
+5. Enter and confirm the new password.
 
-  Available actions include:
+## Complete The Child Profile First
 
-  - Send connection request.
-  - Approve or reject incoming request.
-  - Cancel a pending outgoing request.
-  - Remove an approved connection.
+New users must complete the child profile before they can use locked sections like Browse or My Connections.
 
-  ## Chat With Approved Connections
+1. Open My Profile.
+2. Fill in the required fields across all setup steps.
+3. Save or submit the profile.
 
-  Once a connection is approved:
+The profile asks for information such as:
 
-  1. Open Chat Rooms.
-  2. Select a connected profile.
-  3. Send private messages to coordinate next steps.
+- Basic details.
+- Education and work information.
+- Housing and car status.
+- Personality, hobbies, and partner preferences.
 
-  ## Helpful Notes
+## Profile Rules And Validation
 
-  - Keep your profile accurate and up to date to improve match quality.
-  - Use respectful, clear communication in chat.
-  - If sign-in fails, verify both email and password and try again.
+- Required fields must be filled in before submission.
+- Height must contain numbers only.
+- Weight must contain numbers only.
+- Invalid input triggers an error message before the profile is submitted.
+
+## Browse Profiles
+
+After the child profile is complete, you can browse other profiles.
+
+1. Open Browse.
+2. Use the keyword search box to search by items such as age, city, industry, school, or hukou.
+3. Use the filters to narrow the list.
+4. Open any profile card to see more detail.
+
+## Send A Connection Request
+
+1. Open a profile from the browse page.
+2. Click the connection request button.
+3. Wait for the other side to approve or reject it.
+
+You can also cancel a pending request before it is approved.
+
+## Manage Connections
+
+Use My Connections to track all requests.
+
+- Incoming: Requests received from other users.
+- Outgoing: Requests you sent.
+- Connected: Approved matches.
+
+From this page you can:
+
+- Approve a request.
+- Reject a request.
+- Cancel a request you sent.
+- Remove an approved connection.
+
+## Private Chat
+
+Private chat becomes available only after a connection is approved.
+
+1. Open My Connections.
+2. Go to the Connected section.
+3. Open the chat for that connection.
+4. Send text messages or supported image attachments.
+
+## Helpful Usage Notes
+
+- Keep the child profile accurate and up to date.
+- Complete the profile carefully because it controls access to the rest of the app.
+- Use respectful language when chatting with other families.
+- If a login attempt fails, recheck the email and password first.
+
+## Local Development
+
+1. Run `npm i`.
+2. Run `npm run api` to start the backend.
+3. Run `npm run dev` to start the frontend.
+4. Open the local Vite URL shown in the terminal.
+
+## Deployment
+
+This project is deployed as a single Node server that serves both the API and the built frontend bundle.
+
+To deploy updates to AWS Elastic Beanstalk:
+
+1. Run `npm run build`.
+2. Run `eb deploy gex-shanghai-prod`.
+3. Run `eb status gex-shanghai-prod` to confirm the deployment.
   
