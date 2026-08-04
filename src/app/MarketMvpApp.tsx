@@ -821,6 +821,19 @@ export default function MarketMvpApp() {
     window.setTimeout(() => setNotice((current) => (current?.message === message ? null : current)), 2800);
   }
 
+  function isDigitsOnly(value: string) {
+    return /^\d+$/.test(value.trim());
+  }
+
+  function updateNumericProfileField(fieldKey: 'height' | 'weight', nextValue: string) {
+    if (nextValue === '' || /^\d+$/.test(nextValue)) {
+      setProfileForm((current) => ({ ...current, [fieldKey]: nextValue }));
+      return;
+    }
+
+    showNotice(formatErrorMessage(new Error(fieldKey === 'height' ? 'HEIGHT_INVALID' : 'WEIGHT_INVALID')));
+  }
+
   function formatErrorMessage(error: unknown) {
     const code = String((error as { message?: string } | null)?.message ?? error ?? 'REQUEST_FAILED');
     const mappedZh: Record<string, string> = {
@@ -843,6 +856,8 @@ export default function MarketMvpApp() {
       PROFILE_EXISTS: '错误：档案已存在。',
       PROFILE_NOT_FOUND: '错误：未找到档案。',
       PROFILE_REQUIRED: '错误：请补全必填项。',
+      HEIGHT_INVALID: '错误：身高只能输入数字。',
+      WEIGHT_INVALID: '错误：体重只能输入数字。',
       MESSAGE_EMPTY: '错误：请输入消息或上传图片后再发送。',
       MESSAGE_IMAGE_INVALID: '错误：图片格式无效。',
       MESSAGE_IMAGE_TOO_LARGE: '错误：图片过大，请控制在约 1.8MB 以内。',
@@ -872,6 +887,8 @@ export default function MarketMvpApp() {
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
       PROFILE_REQUIRED: 'Error! Missing Fields!',
+      HEIGHT_INVALID: 'Error! Height must contain digits only!',
+      WEIGHT_INVALID: 'Error! Weight must contain digits only!',
       MESSAGE_EMPTY: 'Error! Enter text or attach an image before sending!',
       MESSAGE_IMAGE_INVALID: 'Error! Invalid image format!',
       MESSAGE_IMAGE_TOO_LARGE: 'Error! Image is too large! Keep it under about 1.8MB.',
@@ -1116,6 +1133,8 @@ export default function MarketMvpApp() {
       setToken(payload.token);
       setSession(payload);
       setLocale(payload.user.language);
+      populateProfileForm(payload.profile ?? null);
+      setSetupStep(1);
       setScreen(payload.profile ? 'browse' : 'setup');
       if (payload.profile) {
         await Promise.all([refreshBrowse(payload.token), refreshConnections(payload.token)]);
@@ -1183,6 +1202,14 @@ export default function MarketMvpApp() {
 
       if (missingField) {
         throw new Error('PROFILE_REQUIRED');
+      }
+
+      if (!isDigitsOnly(profileForm.height)) {
+        throw new Error('HEIGHT_INVALID');
+      }
+
+      if (!isDigitsOnly(profileForm.weight)) {
+        throw new Error('WEIGHT_INVALID');
       }
 
       const payload = {
@@ -1468,6 +1495,9 @@ export default function MarketMvpApp() {
     setProfiles([]);
     setChat(null);
     setSelectedProfile(null);
+    // Clear any in-progress/previous user's profile draft so the next sign-in starts clean
+    populateProfileForm(null);
+    setSetupStep(1);
     setScreen('auth');
   }
 
@@ -1936,9 +1966,10 @@ export default function MarketMvpApp() {
             <div className="flex gap-3">
               {['男', '女'].map((gender) => (
                 <button
+                  type="button"
                   key={gender}
                   onClick={() => setProfileForm((current) => ({ ...current, gender: gender as '男' | '女' }))}
-                  className={`rounded-full border px-4 py-2 text-sm ${profileForm.gender === gender ? 'border-[#A87C1A] bg-[#FEF0F0] text-[#A87C1A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
+                  className={`rounded-full border px-4 py-2 text-sm transition-all duration-200 hover:border-[#C7962B] hover:bg-gradient-to-r hover:from-[#FFF4DD] hover:via-[#FDE7E7] hover:to-[#F9E8C8] hover:text-[#8F5C12] ${profileForm.gender === gender ? 'border-[#A87C1A] bg-[#FEF0F0] text-[#A87C1A]' : 'border-[#D8D0C4] bg-white text-[#5A5248]'}`}
                 >
                   {gender} / {gender === '男' ? 'Male' : 'Female'}
                 </button>
@@ -2061,6 +2092,17 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, hobbies: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
               placeholder={locale === 'zh' ? 'e.g. 摄影、爬山、读书、烘焙' : 'e.g. photography, hiking, reading, baking'}
+            />
+          ) : fieldKey === 'height' || fieldKey === 'weight' ? (
+            <input
+              value={profileForm[fieldKey] as string}
+              onChange={(event) => updateNumericProfileField(fieldKey, event.target.value)}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
+              placeholder={fieldKey === 'height'
+                ? (locale === 'zh' ? '例如：175' : 'e.g. 175')
+                : (locale === 'zh' ? '例如：65' : 'e.g. 65')}
             />
           ) : (
             <input
