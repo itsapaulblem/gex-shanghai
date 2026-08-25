@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.resolve(__dirname, '..', '.data');
+const dataDir = process.env.GEX_DATA_DIR
+  ? path.resolve(process.env.GEX_DATA_DIR)
+  : path.resolve(__dirname, '..', '.data');
 const dbPath = path.join(dataDir, 'gex-shanghai.json');
 
 let state;

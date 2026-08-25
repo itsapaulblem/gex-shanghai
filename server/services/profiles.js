@@ -11,13 +11,79 @@ function toProfileResponse(profile, state) {
   };
 }
 
+function validationError(code) {
+  const error = new Error(code);
+  error.statusCode = 400;
+  return error;
+}
+
+function requiredText(input, field) {
+  if (typeof input?.[field] !== 'string' || !input[field].trim()) {
+    throw validationError('PROFILE_REQUIRED');
+  }
+
+  return input[field].trim();
+}
+
+function optionalText(input, field) {
+  if (input?.[field] == null) {
+    return '';
+  }
+
+  if (typeof input[field] !== 'string') {
+    throw validationError('PROFILE_INVALID');
+  }
+
+  return input[field].trim();
+}
+
+function positiveNumber(input, field, errorCode) {
+  const rawValue = input?.[field];
+  if ((typeof rawValue !== 'string' && typeof rawValue !== 'number') || String(rawValue).trim() === '') {
+    throw validationError('PROFILE_REQUIRED');
+  }
+
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw validationError(errorCode);
+  }
+
+  return value;
+}
+
 function buildProfilePayload(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw validationError('PROFILE_INVALID');
+  }
+
+  const birthYear = positiveNumber(input, 'birthYear', 'PROFILE_INVALID');
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(birthYear) || birthYear < 1940 || birthYear > currentYear) {
+    throw validationError('PROFILE_INVALID');
+  }
+
+  if (input.gender !== '男' && input.gender !== '女') {
+    throw validationError('PROFILE_INVALID');
+  }
+
+  if (!Array.isArray(input.traits)) {
+    throw validationError('PROFILE_REQUIRED');
+  }
+
+  const traits = input.traits
+    .filter((item) => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (traits.length === 0 || traits.length !== input.traits.length) {
+    throw validationError('PROFILE_REQUIRED');
+  }
+
   const preferenceDetails = {
-    preferredAgeRange: input.preferredAgeRange?.trim() ?? '',
-    preferredHeightRange: input.preferredHeightRange?.trim() ?? '',
-    minEducationLevel: input.minEducationLevel?.trim() ?? '',
-    hukouPreference: input.hukouPreference?.trim() ?? '',
-    additionalPreferences: input.additionalPreferences?.trim() ?? '',
+    preferredAgeRange: optionalText(input, 'preferredAgeRange'),
+    preferredHeightRange: optionalText(input, 'preferredHeightRange'),
+    minEducationLevel: optionalText(input, 'minEducationLevel'),
+    hukouPreference: optionalText(input, 'hukouPreference'),
+    additionalPreferences: optionalText(input, 'additionalPreferences'),
   };
 
   const preferencesSummary = [
@@ -29,28 +95,28 @@ function buildProfilePayload(input) {
   ].filter(Boolean).join(' · ');
 
   return {
-    honorific: input.honorific?.trim() ?? '',
-    surname: input.surname?.trim() ?? '',
-    childAlias: input.childAlias.trim(),
+    honorific: requiredText(input, 'honorific'),
+    surname: requiredText(input, 'surname'),
+    childAlias: requiredText(input, 'childAlias'),
     gender: input.gender,
-    birthYear: Number(input.birthYear),
-    age: Number(input.age),
-    height: Number(input.height),
-    weight: Number(input.weight),
-    city: input.city.trim(),
-    hukou: input.hukou.trim(),
-    hometown: input.hometown.trim(),
-    education: input.education.trim(),
-    school: input.school.trim(),
-    major: input.major.trim(),
-    industry: input.industry.trim(),
-    jobTitle: input.jobTitle.trim(),
-    income: input.income.trim(),
-    property: input.property.trim(),
-    car: input.car.trim(),
-    traits: input.traits.filter(Boolean).map((item) => item.trim()),
-    hobbies: input.hobbies.trim(),
-    about: input.about.trim(),
+    birthYear,
+    age: currentYear - birthYear,
+    height: positiveNumber(input, 'height', 'HEIGHT_INVALID'),
+    weight: positiveNumber(input, 'weight', 'WEIGHT_INVALID'),
+    city: requiredText(input, 'city'),
+    hukou: requiredText(input, 'hukou'),
+    hometown: requiredText(input, 'hometown'),
+    education: requiredText(input, 'education'),
+    school: requiredText(input, 'school'),
+    major: requiredText(input, 'major'),
+    industry: requiredText(input, 'industry'),
+    jobTitle: requiredText(input, 'jobTitle'),
+    income: requiredText(input, 'income'),
+    property: requiredText(input, 'property'),
+    car: requiredText(input, 'car'),
+    traits,
+    hobbies: requiredText(input, 'hobbies'),
+    about: optionalText(input, 'about'),
     ...preferenceDetails,
     preferences: preferencesSummary,
   };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Check,
@@ -368,6 +368,24 @@ function translateStored(value: string | undefined | null, options: { zh: string
   return options.find((o) => o.value === value)?.en ?? value;
 }
 
+function formatIncome(value: string | undefined | null, locale: Locale) {
+  if (!value || locale === 'zh') {
+    return value ?? '';
+  }
+
+  const range = value.match(/^(\d+)-(\d+)万\/月$/);
+  if (range) {
+    return `¥${Number(range[1]) * 10}k–${Number(range[2]) * 10}k/month`;
+  }
+
+  const minimum = value.match(/^(\d+)万\/月以上$/);
+  if (minimum) {
+    return `¥${Number(minimum[1]) * 10}k+/month`;
+  }
+
+  return value.replaceAll('月', 'month');
+}
+
 const EDUCATION_LEVEL_OPTIONS = [
   { label: 'Any education', value: 'all' },
   { label: '大专', value: '大专' },
@@ -724,6 +742,11 @@ function getProfileConnectionState(
     return 'pending' as const;
   }
 
+  const incoming = connections?.incoming.some((connection) => connection.requesterProfileId === profileId && connection.status === 'pending') ?? false;
+  if (incoming) {
+    return 'incoming' as const;
+  }
+
   const connected = connections?.connected.some((connection) => {
     const relatedProfileId = connection.otherProfile?.id ?? connection.targetProfileId ?? connection.requesterProfileId;
     return relatedProfileId === profileId;
@@ -769,7 +792,7 @@ export default function MarketMvpApp() {
   const [connections, setConnections] = useState<{ ownProfile: ProfileRecord | null; incoming: ConnectionRecord[]; outgoing: ConnectionRecord[]; connected: ConnectionRecord[] } | null>(null);
   const [chat, setChat] = useState<{ connection: ConnectionRecord; messages: MessageRecord[]; typingUserIds?: string[] } | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [chatTypingActive, setChatTypingActive] = useState(false);
+  const chatTypingActiveRef = useRef(false);
   const [pendingImageDataUrl, setPendingImageDataUrl] = useState<string | null>(null);
   const [pendingImageName, setPendingImageName] = useState('');
   const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
@@ -852,16 +875,20 @@ export default function MarketMvpApp() {
       RESET_TOKEN_INVALID: '错误：重置链接无效。',
       RESET_TOKEN_EXPIRED: '错误：重置链接已过期，请重新申请。',
       CANCEL_NOT_ALLOWED: '错误：仅可取消待处理申请。',
+      CONNECTION_NOT_PENDING: '错误：该申请已被处理，请刷新后重试。',
       REMOVE_NOT_ALLOWED: '错误：仅可移除已通过的连接。',
+      SELF_CONNECTION_NOT_ALLOWED: '错误：不能向自己的档案发送连接申请。',
       PROFILE_EXISTS: '错误：档案已存在。',
       PROFILE_NOT_FOUND: '错误：未找到档案。',
       PROFILE_REQUIRED: '错误：请补全必填项。',
+      PROFILE_INVALID: '错误：档案内容格式不正确。',
       HEIGHT_INVALID: '错误：身高只能输入数字。',
       WEIGHT_INVALID: '错误：体重只能输入数字。',
       MESSAGE_EMPTY: '错误：请输入消息或上传图片后再发送。',
       MESSAGE_IMAGE_INVALID: '错误：图片格式无效。',
       MESSAGE_IMAGE_TOO_LARGE: '错误：图片过大，请控制在约 1.8MB 以内。',
       MESSAGE_NOT_FOUND: '错误：消息不存在或已删除。',
+      MESSAGE_DELETE_FORBIDDEN: '错误：只能为双方删除自己发送的消息。',
       UNAUTHORIZED: '错误：登录状态已失效，请重新登录。',
       REQUEST_FAILED: '错误：请求失败，请稍后重试。',
       NOT_FOUND: '错误：请求地址不存在。',
@@ -883,16 +910,20 @@ export default function MarketMvpApp() {
       RESET_TOKEN_INVALID: 'Error! Reset link is invalid!',
       RESET_TOKEN_EXPIRED: 'Error! Reset link expired! Request a new one.',
       CANCEL_NOT_ALLOWED: 'Error! Only pending requests can be cancelled!',
+      CONNECTION_NOT_PENDING: 'Error! This request was already handled. Please refresh.',
       REMOVE_NOT_ALLOWED: 'Error! Only approved connections can be removed!',
+      SELF_CONNECTION_NOT_ALLOWED: 'Error! You cannot connect to your own profile!',
       PROFILE_EXISTS: 'Error! Profile already exists!',
       PROFILE_NOT_FOUND: 'Error! Profile not found!',
       PROFILE_REQUIRED: 'Error! Missing Fields!',
+      PROFILE_INVALID: 'Error! Some profile values are invalid!',
       HEIGHT_INVALID: 'Error! Height must contain digits only!',
       WEIGHT_INVALID: 'Error! Weight must contain digits only!',
       MESSAGE_EMPTY: 'Error! Enter text or attach an image before sending!',
       MESSAGE_IMAGE_INVALID: 'Error! Invalid image format!',
       MESSAGE_IMAGE_TOO_LARGE: 'Error! Image is too large! Keep it under about 1.8MB.',
       MESSAGE_NOT_FOUND: 'Error! Message not found or already deleted.',
+      MESSAGE_DELETE_FORBIDDEN: 'Error! You can only delete your own messages for both participants.',
       UNAUTHORIZED: 'Error! Please sign in again!',
       REQUEST_FAILED: 'Error! Request failed!',
       NOT_FOUND: 'Error! Not found!',
@@ -1089,26 +1120,26 @@ export default function MarketMvpApp() {
     }
 
     const shouldBroadcastTyping = messageText.trim().length > 0;
-    if (shouldBroadcastTyping === chatTypingActive) {
+    if (shouldBroadcastTyping === chatTypingActiveRef.current) {
       return;
     }
 
-    setChatTypingActive(shouldBroadcastTyping);
     const timer = window.setTimeout(() => {
+      chatTypingActiveRef.current = shouldBroadcastTyping;
       void api.setTyping(token, chat.connection.id, shouldBroadcastTyping).catch(() => undefined);
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [messageText, token, chat?.connection.id, screen, chatTypingActive]);
+  }, [messageText, token, chat?.connection.id, screen]);
 
   useEffect(() => {
-    if (!token || !chat || screen === 'chat' || !chatTypingActive) {
+    if (!token || !chat || screen === 'chat' || !chatTypingActiveRef.current) {
       return;
     }
 
+    chatTypingActiveRef.current = false;
     void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
-    setChatTypingActive(false);
-  }, [screen, token, chat?.connection.id, chatTypingActive]);
+  }, [screen, token, chat?.connection.id]);
 
   useEffect(() => {
     if (!token || ownProfile || (screen !== 'browse' && screen !== 'connections' && screen !== 'detail' && screen !== 'chat')) {
@@ -1373,7 +1404,7 @@ export default function MarketMvpApp() {
       setMessageText('');
       setPendingImageDataUrl(null);
       setPendingImageName('');
-      setChatTypingActive(false);
+      chatTypingActiveRef.current = false;
     } catch (error) {
       showNotice(formatErrorMessage(error));
     }
@@ -1391,7 +1422,8 @@ export default function MarketMvpApp() {
     setMessageText('');
     setPendingImageDataUrl(null);
     setPendingImageName('');
-    setChatTypingActive(false);
+    chatTypingActiveRef.current = false;
+    void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
 
     try {
       const { message } = await api.sendMessage(token, chat.connection.id, {
@@ -1400,7 +1432,6 @@ export default function MarketMvpApp() {
       });
       // Append the returned message directly — no second loadChat round-trip needed
       setChat((current) => current ? { ...current, messages: [...current.messages, message] } : current);
-      void api.setTyping(token, chat.connection.id, false).catch(() => undefined);
     } catch (error) {
       showNotice(formatErrorMessage(error));
     }
@@ -2012,7 +2043,7 @@ export default function MarketMvpApp() {
               onChange={(event) => setProfileForm((current) => ({ ...current, income: event.target.value }))}
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
             >
-              {INCOME_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+              {INCOME_OPTIONS.map((option) => <option key={option} value={option}>{formatIncome(option, locale)}</option>)}
             </select>
           ) : fieldKey === 'property' ? (
             <select
@@ -2213,6 +2244,7 @@ export default function MarketMvpApp() {
     const detailPendingConnection = getPendingOutgoingConnection(selectedProfile.id, connections);
     const detailApprovedConnection = getApprovedConnection(selectedProfile.id, connections);
     const detailRequested = detailConnectionState === 'pending';
+    const detailIncoming = detailConnectionState === 'incoming';
     const detailConnected = detailApprovedConnection !== null && detailConnectionState === 'connected';
     const preferenceDetails = getPreferenceDetails(selectedProfile);
 
@@ -2245,6 +2277,11 @@ export default function MarketMvpApp() {
                         return;
                       }
 
+                      if (detailIncoming) {
+                        goToConnections();
+                        return;
+                      }
+
                       if (detailPendingConnection) {
                         void cancelRequest(detailPendingConnection.id);
                         return;
@@ -2253,10 +2290,10 @@ export default function MarketMvpApp() {
                       void requestConnect(selectedProfile.id);
                     }}
                     disabled={detailConnected}
-                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailConnected ? 'bg-[#2C8A4A] text-white' : detailRequested ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
+                    className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${detailConnected ? 'bg-[#2C8A4A] text-white' : detailRequested ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : detailIncoming ? 'border border-[#E8D49A] bg-[#FFF9E8] text-[#8A6500]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
                   >
-                    {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : <Heart size={16} />}
-                    {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
+                    {detailConnected ? <CheckCircle2 size={16} /> : detailRequested ? <X size={16} /> : detailIncoming ? <Users size={16} /> : <Heart size={16} />}
+                    {detailConnected ? (locale === 'zh' ? '已连接' : 'Connected') : detailRequested ? (locale === 'zh' ? '取消申请' : 'Cancel request') : detailIncoming ? (locale === 'zh' ? '处理收到的申请' : 'Review incoming request') : copy.requestConnect}
                   </button>
                   {detailConnected && detailApprovedConnection ? (
                     <button
@@ -2278,7 +2315,7 @@ export default function MarketMvpApp() {
                     { label: locale === 'zh' ? '地区' : 'Location', value: locale === 'zh' ? `城市: ${selectedProfile.city} · 户籍: ${selectedProfile.hukou}` : `City: ${selectedProfile.city} · Hukou: ${selectedProfile.hukou}` },
                     { label: locale === 'zh' ? '学历' : 'Education', value: locale === 'zh' ? `学历: ${selectedProfile.education} · 学校: ${selectedProfile.school}` : `Education: ${translateStored(selectedProfile.education, EDUCATION_OPTIONS, locale)} · School: ${selectedProfile.school}` },
                     { label: locale === 'zh' ? '职业' : 'Work', value: locale === 'zh' ? `行业: ${selectedProfile.industry} · 职位: ${selectedProfile.jobTitle}` : `Industry: ${selectedProfile.industry} · Job: ${selectedProfile.jobTitle}` },
-                    { label: locale === 'zh' ? '收入' : 'Income', value: locale === 'zh' ? `月收入: ${selectedProfile.income}` : `Monthly income: ${selectedProfile.income}` },
+                    { label: locale === 'zh' ? '收入' : 'Income', value: locale === 'zh' ? `月收入: ${selectedProfile.income}` : `Monthly income: ${formatIncome(selectedProfile.income, locale)}` },
                     { label: locale === 'zh' ? '房产' : 'Property', value: translateStored(selectedProfile.property, PROPERTY_OPTIONS, locale) },
                     { label: locale === 'zh' ? '车辆' : 'Vehicle', value: translateStored(selectedProfile.car, CAR_OPTIONS, locale) },
                   ].map((item, index) => (
@@ -2326,7 +2363,7 @@ export default function MarketMvpApp() {
                     [locale === 'zh' ? '所学专业' : 'Major / Field of Study', selectedProfile.major],
                     [locale === 'zh' ? '职业行业' : 'Industry', selectedProfile.industry],
                     [locale === 'zh' ? '职位' : 'Job title', selectedProfile.jobTitle],
-                    [locale === 'zh' ? '月收入' : 'Monthly income', selectedProfile.income],
+                    [locale === 'zh' ? '月收入' : 'Monthly income', formatIncome(selectedProfile.income, locale)],
                   ].map(([label, value]) => (
                     <div key={label} className="flex px-5 py-2.5">
                       <span className="text-[11px] font-mono text-[#7A6E62] w-28 flex-shrink-0">{label}</span>
@@ -2443,6 +2480,9 @@ export default function MarketMvpApp() {
     const otherProfile = chat.connection.otherProfile ?? chat.connection.targetProfile ?? chat.connection.requesterProfile ?? null;
     const isOnline = otherProfile?.presence?.status === 'online';
     const lastSeenHours = formatLastSeenHours(otherProfile?.presence?.lastSeenAt);
+    const contextMessageIsMine = messageContextMenu
+      ? chat.messages.some((message) => message.id === messageContextMenu.messageId && message.senderUserId === session?.user.id)
+      : false;
 
     return (
       <div className="h-screen overflow-hidden bg-[#F7F4EF] text-[#1A1208]" onClick={() => setMessageContextMenu(null)}>
@@ -2479,7 +2519,7 @@ export default function MarketMvpApp() {
                       [locale === 'zh' ? '户籍' : 'Hukou', otherProfile.hukou],
                       [locale === 'zh' ? '学历' : 'Education', translateStored(otherProfile.education, EDUCATION_OPTIONS, locale)],
                       [locale === 'zh' ? '行业' : 'Industry', otherProfile.industry],
-                      [locale === 'zh' ? '收入' : 'Income', otherProfile.income],
+                      [locale === 'zh' ? '收入' : 'Income', formatIncome(otherProfile.income, locale)],
                       [locale === 'zh' ? '房产' : 'Property', translateStored(otherProfile.property, PROPERTY_OPTIONS, locale)],
                       [locale === 'zh' ? '车辆' : 'Vehicle', translateStored(otherProfile.car, CAR_OPTIONS, locale)],
                     ].map(([label, value]) => (
@@ -2575,13 +2615,15 @@ export default function MarketMvpApp() {
             style={{ left: messageContextMenu.x, top: messageContextMenu.y }}
             onClick={(event) => event.stopPropagation()}
           >
-            <button
-              type="button"
-              className="w-full rounded-md px-3 py-2 text-left text-sm text-[#B91C1C] hover:bg-[#FFF5F5]"
-              onClick={() => void deleteChatMessage(messageContextMenu.messageId)}
-            >
-              {locale === 'zh' ? '删除消息（双方）' : 'Delete message (for both)'}
-            </button>
+            {contextMessageIsMine ? (
+              <button
+                type="button"
+                className="w-full rounded-md px-3 py-2 text-left text-sm text-[#B91C1C] hover:bg-[#FFF5F5]"
+                onClick={() => void deleteChatMessage(messageContextMenu.messageId)}
+              >
+                {locale === 'zh' ? '删除消息（双方）' : 'Delete message (for both)'}
+              </button>
+            ) : null}
             <button
               type="button"
               className="mt-1 w-full rounded-md px-3 py-2 text-left text-sm text-[#5A5248] hover:bg-[#F7F4EF]"
@@ -2622,21 +2664,21 @@ export default function MarketMvpApp() {
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Gender / 性别</div>
               <select value={filters.gender} onChange={(event) => setFilters((current) => ({ ...current, gender: event.target.value as GenderFilter }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                <option value="all">{locale === 'zh' ? 'Any / 不限' : 'Any'}</option>
-                <option value="男">男</option>
-                <option value="女">女</option>
+                <option value="all">{locale === 'zh' ? '不限性别' : 'Any gender'}</option>
+                <option value="男">{locale === 'zh' ? '男' : 'Male'}</option>
+                <option value="女">{locale === 'zh' ? '女' : 'Female'}</option>
               </select>
             </label>
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Age Range / 年龄范围</div>
               <select value={filters.ageRange} onChange={(event) => setFilters((current) => ({ ...current, ageRange: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                {AGE_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {AGE_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.value === 'all' && locale === 'zh' ? '不限年龄' : option.label}</option>)}
               </select>
             </label>
             <label className="block">
               <div className="mb-1 text-[10px] font-mono text-[#7A6E62]">Height / 身高</div>
               <select value={filters.heightRange} onChange={(event) => setFilters((current) => ({ ...current, heightRange: event.target.value }))} className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]">
-                {HEIGHT_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {HEIGHT_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.value === 'all' && locale === 'zh' ? '不限身高' : option.label}</option>)}
               </select>
             </label>
             <label className="block">
@@ -2655,7 +2697,11 @@ export default function MarketMvpApp() {
                 onChange={(event) => setFilters((current) => ({ ...current, salaryRange: event.target.value }))}
                 className="w-full rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm outline-none focus:border-[#B5272A]"
               >
-                {SALARY_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {SALARY_RANGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value === 'all' ? (locale === 'zh' ? '不限收入' : 'Any income') : formatIncome(option.value, locale)}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -2695,6 +2741,7 @@ export default function MarketMvpApp() {
             const connectionState = getProfileConnectionState(profile.id, connections);
             const pendingConnection = getPendingOutgoingConnection(profile.id, connections);
             const isPending = connectionState === 'pending';
+            const isIncoming = connectionState === 'incoming';
             const isConnected = connectionState === 'connected';
 
             return (
@@ -2717,7 +2764,7 @@ export default function MarketMvpApp() {
                   <div className="space-y-2 text-sm text-[#5A5248]">
                     <div>{locale === 'zh' ? `学校/专业: ${profile.school} · ${profile.major}` : `School/Major: ${profile.school} · ${profile.major}`}</div>
                     <div>{locale === 'zh' ? `行业/职业: ${profile.industry} · ${profile.jobTitle}` : `Industry/Job: ${profile.industry} · ${profile.jobTitle}`}</div>
-                    <div>{locale === 'zh' ? `月收入: ${profile.income}` : `Monthly income: ${profile.income}`}</div>
+                    <div>{locale === 'zh' ? `月收入: ${profile.income}` : `Monthly income: ${formatIncome(profile.income, locale)}`}</div>
                   </div>
                   <div className="mt-4 flex gap-2">
                     <button onClick={() => openProfile(profile.id)} className="flex-1 rounded-xl border border-[#D8D0C4] bg-white px-4 py-3 text-sm text-[#5A5248] hover:bg-[#F7F4EF] transition-colors">
@@ -2729,6 +2776,11 @@ export default function MarketMvpApp() {
                           return;
                         }
 
+                        if (isIncoming) {
+                          goToConnections();
+                          return;
+                        }
+
                         if (pendingConnection) {
                           void cancelRequest(pendingConnection.id);
                           return;
@@ -2737,10 +2789,10 @@ export default function MarketMvpApp() {
                         void requestConnect(profile.id);
                       }}
                       disabled={isConnected}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#2C8A4A] text-white' : isPending ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${isConnected ? 'bg-[#2C8A4A] text-white' : isPending ? 'border border-[#F5C4C5] bg-[#FFF5F5] text-[#B91C1C]' : isIncoming ? 'border border-[#E8D49A] bg-[#FFF9E8] text-[#8A6500]' : 'bg-[#B5272A] text-white hover:bg-[#9E2224]'}`}
                     >
-                      {isConnected ? <CheckCircle2 size={16} /> : isPending ? <X size={16} /> : <UserPlus size={16} />}
-                      {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '取消申请' : 'Cancel request') : copy.requestConnect}
+                      {isConnected ? <CheckCircle2 size={16} /> : isPending ? <X size={16} /> : isIncoming ? <Users size={16} /> : <UserPlus size={16} />}
+                      {isConnected ? (locale === 'zh' ? '已连接' : 'Connected') : isPending ? (locale === 'zh' ? '取消申请' : 'Cancel request') : isIncoming ? (locale === 'zh' ? '处理申请' : 'Review request') : copy.requestConnect}
                     </button>
                   </div>
                 </div>

@@ -49,58 +49,22 @@
       "lastSeenAt": "2026-07-17T07:10:50.402Z"
     },
     {
-      "id": "user_d5cfb89c",
+      "id": "user_13213d7f",
       "email": "paulcheng46@gmail.com",
-      "passwordSalt": "95b28874e714f83da583de2f58893bf8",
-      "passwordHash": "fe30667ddb2bb80c57ae72ed857d664cb8fe0d7988ad6769f60ae9aced8b893d",
-      "createdAt": "2026-07-20T08:34:20.877Z",
-      "language": "zh",
-      "lastSeenAt": "2026-08-03T01:43:02.281Z"
+      "passwordSalt": "a5716c933507522fb67b5c4debde02c2",
+      "passwordHash": "1fd26b9990b28da62f5ac578803cb31c1713c197fc28dbc5103fb25793aecdba",
+      "createdAt": "2026-08-25T04:23:39.750Z",
+      "language": "en",
+      "lastSeenAt": "2026-08-25T04:32:54.330Z"
     },
     {
-      "id": "user_00d3853f",
+      "id": "user_23f31318",
       "email": "paulcheng461@gmail.com",
-      "passwordSalt": "e361dc7a416d3c70f7d051ae1f671b7d",
-      "passwordHash": "fe017e5bd4e64f444b094806608d512532d9b93fd0d324465b53f68c08558f82",
-      "createdAt": "2026-07-20T11:14:23.030Z",
-      "language": "en",
-      "lastSeenAt": "2026-07-20T11:14:33.743Z"
-    },
-    {
-      "id": "user_ce242e5f",
-      "email": "fcewfwefd@vcds.com",
-      "passwordSalt": "10687518a7a6dc9b0d734a339e5f721b",
-      "passwordHash": "b080fe5cc5bdc9f1163dc6ada187adff244cd522694985bb24ad59c6adcfca94",
-      "createdAt": "2026-07-30T04:28:02.265Z",
-      "language": "en",
-      "lastSeenAt": "2026-08-04T08:50:19.921Z"
-    },
-    {
-      "id": "user_b63bc8a6",
-      "email": "example@qq.com",
-      "passwordSalt": "53dc49ba19ae0ef7f6babd1652d638cd",
-      "passwordHash": "a48454fda9468a3f8f90c6f2c419b3c191911d79c73106570750a6e5d9675fc7",
-      "createdAt": "2026-08-04T08:30:31.260Z",
+      "passwordSalt": "621f720cd6097f022057cd6778bbf5eb",
+      "passwordHash": "505f8f271346bfc93c157c81e929f17df716b63ad690f0846f53a6494adba075",
+      "createdAt": "2026-08-25T04:24:44.477Z",
       "language": "zh",
-      "lastSeenAt": "2026-08-04T08:30:58.990Z"
-    },
-    {
-      "id": "user_97020a77",
-      "email": "examplwe@qq.com",
-      "passwordSalt": "c9a0e5bdc3edece4b901e7a961a9dc8b",
-      "passwordHash": "381923cd70ee666aee0c4d290cec6c933a64ce3c27a5e121342856f7001541a8",
-      "createdAt": "2026-08-04T08:31:02.507Z",
-      "language": "zh",
-      "lastSeenAt": "2026-08-04T08:44:30.752Z"
-    },
-    {
-      "id": "user_4d0dd984",
-      "email": "fcewfwezfd@vcds.com",
-      "passwordSalt": "502d9c58c4cfcfe04791d0a75cae8fb8",
-      "passwordHash": "ad6cd0a63fd47387c89ae76c620e5a1e5146e85aff760c143011c0bc63473b4c",
-      "createdAt": "2026-08-04T08:44:41.381Z",
-      "language": "zh",
-      "lastSeenAt": "2026-08-04T08:44:41.459Z"
+      "lastSeenAt": "2026-08-25T04:44:12.722Z"
     }
   ],
   "sessions": [
@@ -133,6 +97,16 @@
       "token": "b3797784-4954-43ed-a9ce-a5678605a156",
       "userId": "user_4d0dd984",
       "createdAt": "2026-08-04T08:44:41.381Z"
+    },
+    {
+      "token": "7dfa53bb-e65e-4023-8776-691422c90c42",
+      "userId": "user_13213d7f",
+      "createdAt": "2026-08-25T04:23:39.750Z"
+    },
+    {
+      "token": "9552739c-4d19-4361-84f2-671aa9d53c2b",
+      "userId": "user_23f31318",
+      "createdAt": "2026-08-25T04:24:44.477Z"
     }
   ],
   "passwordResetTokens": [],
@@ -242,6 +216,76 @@
       "additionalPreferences": "rvgrevre",
       "preferences": "rvgrevre",
       "createdAt": "2026-08-04T08:30:58.911Z"
+    },
+    {
+      "id": "profile_2777bffd",
+      "ownerUserId": "user_13213d7f",
+      "honorific": "Mr",
+      "surname": "cwcerc",
+      "childAlias": "rver",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "fverf",
+      "major": "efrvwrev",
+      "industry": "vfevev",
+      "jobTitle": "vewre",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "verv"
+      ],
+      "hobbies": "rver",
+      "about": "",
+      "preferredAgeRange": "",
+      "preferredHeightRange": "",
+      "minEducationLevel": "",
+      "hukouPreference": "",
+      "additionalPreferences": "vrvre",
+      "preferences": "vrvre",
+      "createdAt": "2026-08-25T04:24:14.630Z"
+    },
+    {
+      "id": "profile_b144f2cd",
+      "ownerUserId": "user_23f31318",
+      "honorific": "Mr",
+      "surname": "test2",
+      "childAlias": "vefr",
+      "gender": "男",
+      "birthYear": 1995,
+      "age": 31,
+      "height": 175,
+      "weight": 65,
+      "city": "上海",
+      "hukou": "上海",
+      "hometown": "上海",
+      "education": "硕士",
+      "school": "vvf",
+      "major": "fvdvf",
+      "industry": "ff",
+      "jobTitle": "fvvd",
+      "income": "1.5-3万/月",
+      "property": "有房",
+      "car": "有车",
+      "traits": [
+        "vfvdf"
+      ],
+      "hobbies": "fvddfv",
+      "about": "fvsdf",
+      "preferredAgeRange": "",
+      "preferredHeightRange": "",
+      "minEducationLevel": "",
+      "hukouPreference": "",
+      "additionalPreferences": "fvdf",
+      "preferences": "fvdf",
+      "createdAt": "2026-08-25T04:25:00.482Z"
     }
   ],
   "connections": [
@@ -254,6 +298,46 @@
       "status": "approved",
       "createdAt": "2026-07-20T11:14:33.732Z",
       "updatedAt": "2026-07-20T11:14:41.781Z"
+    },
+    {
+      "id": "connection_d2407fe2",
+      "requesterUserId": "user_23f31318",
+      "requesterProfileId": "profile_b144f2cd",
+      "targetUserId": "user_00d3853f",
+      "targetProfileId": "profile_5e3ec6f4",
+      "status": "pending",
+      "createdAt": "2026-08-25T04:25:02.887Z",
+      "updatedAt": "2026-08-25T04:25:02.887Z"
+    },
+    {
+      "id": "connection_080b567e",
+      "requesterUserId": "user_23f31318",
+      "requesterProfileId": "profile_b144f2cd",
+      "targetUserId": "user_b63bc8a6",
+      "targetProfileId": "profile_00c72b45",
+      "status": "pending",
+      "createdAt": "2026-08-25T04:25:03.558Z",
+      "updatedAt": "2026-08-25T04:25:03.558Z"
+    },
+    {
+      "id": "connection_45b1d5cb",
+      "requesterUserId": "user_23f31318",
+      "requesterProfileId": "profile_b144f2cd",
+      "targetUserId": "user_13213d7f",
+      "targetProfileId": "profile_2777bffd",
+      "status": "approved",
+      "createdAt": "2026-08-25T04:25:04.425Z",
+      "updatedAt": "2026-08-25T04:27:41.903Z"
+    },
+    {
+      "id": "connection_0464b56e",
+      "requesterUserId": "user_23f31318",
+      "requesterProfileId": "profile_b144f2cd",
+      "targetUserId": "user_d5cfb89c",
+      "targetProfileId": "profile_571d1c99",
+      "status": "pending",
+      "createdAt": "2026-08-25T04:27:09.548Z",
+      "updatedAt": "2026-08-25T04:27:09.548Z"
     }
   ],
   "messages": [
@@ -274,8 +358,52 @@
       "messageType": "text",
       "imageDataUrl": null,
       "createdAt": "2026-08-02T02:13:04.112Z"
+    },
+    {
+      "id": "message_f2aebca9",
+      "connectionId": "connection_45b1d5cb",
+      "senderUserId": "user_23f31318",
+      "text": "hello",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-08-25T04:30:53.375Z"
+    },
+    {
+      "id": "message_323664ec",
+      "connectionId": "connection_45b1d5cb",
+      "senderUserId": "user_13213d7f",
+      "text": "whats your name",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-08-25T04:31:44.862Z"
+    },
+    {
+      "id": "message_f03d8948",
+      "connectionId": "connection_45b1d5cb",
+      "senderUserId": "user_23f31318",
+      "text": "my name is",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-08-25T04:32:47.782Z"
+    },
+    {
+      "id": "message_b45bec32",
+      "connectionId": "connection_45b1d5cb",
+      "senderUserId": "user_23f31318",
+      "text": "hi",
+      "messageType": "text",
+      "imageDataUrl": null,
+      "createdAt": "2026-08-25T04:43:55.876Z"
     }
   ],
-  "hiddenMessages": [],
+  "hiddenMessages": [
+    {
+      "id": "hidden_message_70407add",
+      "connectionId": "connection_45b1d5cb",
+      "messageId": "message_f2aebca9",
+      "userId": "user_13213d7f",
+      "createdAt": "2026-08-25T04:31:02.508Z"
+    }
+  ],
   "typingStates": []
 }

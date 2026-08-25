@@ -155,6 +155,12 @@ async function deleteMessage(connectionId, messageId, userId) {
       throw error;
     }
 
+    if (state.messages[index].senderUserId !== userId) {
+      const error = new Error('MESSAGE_DELETE_FORBIDDEN');
+      error.statusCode = 403;
+      throw error;
+    }
+
     const [deleted] = state.messages.splice(index, 1);
     state.hiddenMessages = (state.hiddenMessages ?? []).filter((entry) => entry.messageId !== deleted.id);
     return { ok: true, message: deleted };

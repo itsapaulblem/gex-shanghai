@@ -51,11 +51,27 @@ async function requestConnection(userId, targetProfileId) {
       throw error;
     }
 
+    if (targetProfile.ownerUserId === userId) {
+      const error = new Error('SELF_CONNECTION_NOT_ALLOWED');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const existing = state.connections.find((connection) => {
       const sameDirection = connection.requesterProfileId === requesterProfile.id && connection.targetProfileId === targetProfile.id;
       const reversedDirection = connection.requesterProfileId === targetProfile.id && connection.targetProfileId === requesterProfile.id;
       return sameDirection || reversedDirection;
     });
+
+    if (existing?.status === 'rejected') {
+      existing.requesterUserId = userId;
+      existing.requesterProfileId = requesterProfile.id;
+      existing.targetUserId = targetProfile.ownerUserId;
+      existing.targetProfileId = targetProfile.id;
+      existing.status = 'pending';
+      existing.updatedAt = new Date().toISOString();
+      return computeConnectionView(existing, userId, state);
+    }
 
     if (existing) {
       return computeConnectionView(existing, userId, state);
@@ -120,6 +136,12 @@ async function approveConnection(connectionId, userId) {
       throw error;
     }
 
+    if (connection.status !== 'pending') {
+      const error = new Error('CONNECTION_NOT_PENDING');
+      error.statusCode = 409;
+      throw error;
+    }
+
     connection.status = 'approved';
     connection.updatedAt = new Date().toISOString();
 
@@ -139,6 +161,12 @@ async function rejectConnection(connectionId, userId) {
     if (connection.targetUserId !== userId) {
       const error = new Error('FORBIDDEN');
       error.statusCode = 403;
+      throw error;
+    }
+
+    if (connection.status !== 'pending') {
+      const error = new Error('CONNECTION_NOT_PENDING');
+      error.statusCode = 409;
       throw error;
     }
 

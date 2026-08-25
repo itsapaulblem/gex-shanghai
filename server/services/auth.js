@@ -8,11 +8,7 @@ function verifyPassword(password, user) {
 }
 
 function createSessionUser(user) {
-  return {
-    ...sanitizeUser(user),
-    passwordHash: user.passwordHash,
-    passwordSalt: user.passwordSalt ?? null,
-  };
+  return sanitizeUser(user);
 }
 
 function validateRegistration(email, password) {

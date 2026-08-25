@@ -5,8 +5,6 @@ export interface UserRecord {
   email: string;
   createdAt: string;
   language: Locale;
-  passwordHash?: string;
-  passwordSalt?: string | null;
 }
 
 export interface ProfileRecord {
