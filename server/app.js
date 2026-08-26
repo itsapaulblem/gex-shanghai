@@ -6,7 +6,8 @@ import { approveConnection, cancelConnection, listConnections, rejectConnection,
 import { deleteMessage, hideMessageForUser, listMessages, sendMessage, setTypingState } from './services/chat.js';
 import { login, register, requestPasswordReset, requestSignupOtp, resetPassword, resolveSession, updateLanguage, verifySignupOtp } from './services/auth.js';
 import { createProfile, getProfile, listProfiles, updateOwnProfile } from './services/profiles.js';
-import { getState, loadState, touchUserActivity } from './store.js';
+import { getState, loadState, storageBackend, withState } from './store.js';
+import { seedDemoData } from './demo-data.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,10 +122,6 @@ async function handleApi(request, response) {
   const session = await getCurrentSession(request);
   const currentUser = session?.user ?? null;
 
-  if (currentUser) {
-    touchUserActivity(currentUser.id);
-  }
-
   try {
     if (request.method === 'OPTIONS') {
       sendJson(response, 204, {});
@@ -132,11 +129,12 @@ async function handleApi(request, response) {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/health') {
-      sendJson(response, 200, { ok: true });
+      sendJson(response, 200, { ok: true, storage: storageBackend });
       return;
     }
 
     if (request.method === 'GET' && url.pathname === '/api/metrics/public') {
+      await withState(async () => undefined);
       const state = getState();
       const now = Date.now();
       const startOfToday = new Date();
@@ -414,6 +412,11 @@ async function handleApi(request, response) {
 }
 
 await loadState();
+
+if (process.env.SEED_DEMO_DATA === 'true') {
+  const seedResult = await seedDemoData();
+  console.log('Demo data ready:', seedResult);
+}
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);

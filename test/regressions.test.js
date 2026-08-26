@@ -7,7 +7,8 @@ import test from 'node:test';
 const testDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gex-shanghai-test-'));
 process.env.GEX_DATA_DIR = testDataDir;
 
-const { getState, loadState } = await import('../server/store.js');
+const { closeStore, getState, loadState } = await import('../server/store.js');
+const { seedDemoData } = await import('../server/demo-data.js');
 const { register, resolveSession } = await import('../server/services/auth.js');
 const { createProfile } = await import('../server/services/profiles.js');
 const { approveConnection, rejectConnection, requestConnection } = await import('../server/services/connections.js');
@@ -117,6 +118,49 @@ test('security and behavior regressions', async (t) => {
   });
 });
 
+test('demo data is realistic, internally consistent, idempotent, and preserves real accounts', async () => {
+  const state = getState();
+  const realUserIds = new Set(state.users.map((user) => user.id));
+  const firstResult = await seedDemoData();
+
+  assert.deepEqual(
+    {
+      profiles: firstResult.profiles,
+      users: firstResult.users,
+      connections: firstResult.connections,
+      approvedConnections: firstResult.approvedConnections,
+      messages: firstResult.messages,
+    },
+    { profiles: 300, users: 300, connections: 650, approvedConnections: 455, messages: 3600 },
+  );
+
+  const demoUsers = state.users.filter((user) => user.id.startsWith('demo_'));
+  const demoProfiles = state.profiles.filter((profile) => profile.id.startsWith('demo_'));
+  const demoConnections = state.connections.filter((connection) => connection.id.startsWith('demo_'));
+  const demoMessages = state.messages.filter((message) => message.id.startsWith('demo_'));
+  assert.equal(demoUsers.length, 300);
+  assert.equal(demoProfiles.length, 300);
+  assert.equal(demoConnections.length, 650);
+  assert.equal(demoMessages.length, 3600);
+  assert.ok(demoProfiles.every((profile) => /[\u3400-\u9fff]/u.test(`${profile.childAlias}${profile.about}`)));
+  assert.ok(demoMessages.every((message) => /[\u3400-\u9fff]/u.test(message.text)));
+
+  const userIds = new Set(state.users.map((user) => user.id));
+  const profileIds = new Set(state.profiles.map((profile) => profile.id));
+  const connectionIds = new Set(state.connections.map((connection) => connection.id));
+  assert.ok(demoProfiles.every((profile) => userIds.has(profile.ownerUserId)));
+  assert.ok(demoConnections.every((connection) => userIds.has(connection.requesterUserId) && userIds.has(connection.targetUserId)));
+  assert.ok(demoConnections.every((connection) => profileIds.has(connection.requesterProfileId) && profileIds.has(connection.targetProfileId)));
+  assert.ok(demoMessages.every((message) => connectionIds.has(message.connectionId) && userIds.has(message.senderUserId)));
+
+  await seedDemoData();
+  assert.equal(state.users.filter((user) => user.id.startsWith('demo_')).length, 300);
+  assert.equal(state.connections.filter((connection) => connection.id.startsWith('demo_')).length, 650);
+  assert.equal(state.messages.filter((message) => message.id.startsWith('demo_')).length, 3600);
+  assert.ok([...realUserIds].every((userId) => state.users.some((user) => user.id === userId)));
+});
+
 test.after(async () => {
+  await closeStore();
   await fs.rm(testDataDir, { recursive: true, force: true });
 });

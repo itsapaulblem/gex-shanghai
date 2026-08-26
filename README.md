@@ -136,11 +136,41 @@ Private chat becomes available only after a connection is approved.
 
 ## Deployment
 
-This project is deployed as a single Node server that serves both the API and the built frontend bundle.
+This project is deployed as a single Node server that serves both the API and the built frontend bundle. Production requires PostgreSQL so application data survives Elastic Beanstalk instance replacements and deployments. Local development and automated tests continue to use `.data/gex-shanghai.json` unless PostgreSQL is explicitly configured.
+
+### Production database
+
+Create a PostgreSQL database in Amazon RDS, preferably outside the Elastic Beanstalk environment lifecycle. Allow the Elastic Beanstalk instance security group to connect to port 5432, then configure either:
+
+- `DATABASE_URL` with a PostgreSQL connection string; or
+- `RDS_HOSTNAME`, `RDS_PORT`, `RDS_DB_NAME`, `RDS_USERNAME`, and `RDS_PASSWORD`.
+
+RDS connections use TLS with certificate verification against the official AWS regional RDS CA bundle included during the Docker build.
+
+The server creates its persistence table on first startup. It refuses to start with file storage when `NODE_ENV=production`, preventing an accidental non-durable deployment. `/api/health` reports the active storage backend.
 
 To deploy updates to AWS Elastic Beanstalk:
 
 1. Run `npm run build`.
-2. Run `eb deploy gex-shanghai-prod`.
-3. Run `eb status gex-shanghai-prod` to confirm the deployment.
+2. Configure the RDS environment properties in Elastic Beanstalk.
+3. Run `eb deploy gex-shanghai-prod`.
+4. Run `eb status gex-shanghai-prod` to confirm the deployment.
+
+### Synthetic Chinese demonstration data
+
+The deterministic seed creates 300 fictional profiles, 650 connections, and 3,600 Chinese chat messages. All generated records are marked `synthetic`, use `example.com` addresses, and are safe to regenerate. Re-running the seed replaces only IDs beginning with `demo_` and preserves genuine accounts.
+
+For local development:
+
+```powershell
+npm run seed:demo
+```
+
+For the configured Elastic Beanstalk environment, after deploying the PostgreSQL-backed version:
+
+```powershell
+.\seed-eb.ps1
+```
+
+The remote script enables seeding for one environment update and disables it afterward. The demonstration login is `demo001@example.com` with password `Demo!2026`. Never use that shared password for real accounts.
   

@@ -7,6 +7,8 @@
 # Dependencies and local runtime data
 node_modules/
 .data/
+.npm-cache/
+.norton-aws-ca.pem
 
 # Local development artifacts
 *.local

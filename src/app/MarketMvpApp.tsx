@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Eye,
   EyeOff,
@@ -548,8 +549,8 @@ const PROFILE_FIELD_LABELS: Record<keyof ProfileFormState, { zh: string; en: str
   gender: { zh: '性别', en: 'Gender' },
   birthYear: { zh: '出生年份', en: 'Birth year' },
   age: { zh: '年龄', en: 'Age' },
-  height: { zh: '身高', en: 'Height' },
-  weight: { zh: '体重', en: 'Weight' },
+  height: { zh: '身高（厘米）', en: 'Height (cm)' },
+  weight: { zh: '体重（公斤）', en: 'Weight (kg)' },
   city: { zh: '现居城市', en: 'City' },
   hukou: { zh: '户籍', en: 'Hukou' },
   hometown: { zh: '老家', en: 'Hometown' },
@@ -564,7 +565,7 @@ const PROFILE_FIELD_LABELS: Record<keyof ProfileFormState, { zh: string; en: str
   traits: { zh: '性格描述', en: 'Personality' },
   hobbies: { zh: '兴趣爱好', en: 'Hobbies & Interests' },
   preferredAgeRange: { zh: '期望年龄范围', en: 'Preferred Age Range' },
-  preferredHeightRange: { zh: '期望身高范围', en: 'Preferred Height (cm)' },
+  preferredHeightRange: { zh: '期望身高范围（厘米）', en: 'Preferred Height (cm)' },
   minEducationLevel: { zh: '最低学历要求', en: 'Min. Education Level' },
   hukouPreference: { zh: '户籍偏好', en: 'Hukou Preference' },
   additionalPreferences: { zh: '其他要求', en: 'Additional Preferences' },
@@ -2132,8 +2133,8 @@ export default function MarketMvpApp() {
               pattern="[0-9]*"
               className="w-full rounded-lg border border-[#D8D0C4] bg-[#FAFAF8] px-4 py-3 text-sm outline-none focus:border-[#A87C1A]"
               placeholder={fieldKey === 'height'
-                ? (locale === 'zh' ? '例如：175' : 'e.g. 175')
-                : (locale === 'zh' ? '例如：65' : 'e.g. 65')}
+                ? (locale === 'zh' ? '例如：175 厘米' : 'e.g. 175 cm')
+                : (locale === 'zh' ? '例如：65 公斤' : 'e.g. 65 kg')}
             />
           ) : (
             <input
@@ -2801,7 +2802,17 @@ export default function MarketMvpApp() {
           })}
         </div>
 
-        <div className="mt-8 flex items-center justify-center gap-2">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setBrowsePage(Math.max(1, activeBrowsePage - 1))}
+            disabled={activeBrowsePage === 1}
+            aria-label={locale === 'zh' ? '上一页' : 'Previous page'}
+            title={locale === 'zh' ? '上一页' : 'Previous page'}
+            className="flex h-8 min-w-8 items-center justify-center rounded border border-[#D77A7A] bg-[#FFF5F5] px-2 text-[#B91C1C] disabled:cursor-not-allowed disabled:border-[#D8D0C4] disabled:bg-[#F5F2ED] disabled:text-[#AAA197]"
+          >
+            <ChevronLeft size={16} />
+          </button>
           {buildPaginationItems(browsePageCount, activeBrowsePage).map((item, index) => (
             typeof item === 'number' ? (
               <button
@@ -2815,6 +2826,19 @@ export default function MarketMvpApp() {
               <span key={`ellipsis-${index}`} className="px-1 text-[#8A8070]">{item}</span>
             )
           ))}
+          <button
+            type="button"
+            onClick={() => setBrowsePage(Math.min(browsePageCount, activeBrowsePage + 1))}
+            disabled={activeBrowsePage === browsePageCount}
+            aria-label={locale === 'zh' ? '下一页' : 'Next page'}
+            title={locale === 'zh' ? '下一页' : 'Next page'}
+            className="flex h-8 min-w-8 items-center justify-center rounded border border-[#D77A7A] bg-[#FFF5F5] px-2 text-[#B91C1C] disabled:cursor-not-allowed disabled:border-[#D8D0C4] disabled:bg-[#F5F2ED] disabled:text-[#AAA197]"
+          >
+            <ChevronRight size={16} />
+          </button>
+          <span className="ml-1 text-[11px] text-[#7A6E62]">
+            {locale === 'zh' ? `第 ${activeBrowsePage} / ${browsePageCount} 页` : `Page ${activeBrowsePage} of ${browsePageCount}`}
+          </span>
         </div>
       </div>
       {notice ? <Toast notice={notice} /> : null}

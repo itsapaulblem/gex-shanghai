@@ -25,9 +25,15 @@ aws --version | Out-Host
 
 Write-Host "Building frontend bundle..."
 npm run build
+if ($LASTEXITCODE -ne 0) {
+  throw "Frontend build failed. Deployment stopped."
+}
 
 Write-Host "Building Docker image locally (sanity check)..."
 docker build -t $AppName .
+if ($LASTEXITCODE -ne 0) {
+  throw "Docker build failed. Deployment stopped."
+}
 
 if (-not (Test-Path ".elasticbeanstalk\config.yml")) {
   Write-Host "Initializing Elastic Beanstalk app..."
@@ -48,6 +54,9 @@ if (-not $envExists) {
 
 Write-Host "Deploying latest version..."
 eb deploy $EnvName
+if ($LASTEXITCODE -ne 0) {
+  throw "Elastic Beanstalk deployment failed. The browser will not be opened."
+}
 
 Write-Host "Environment status and URL:"
 eb status $EnvName | Out-Host

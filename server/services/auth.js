@@ -312,27 +312,27 @@ async function resetPassword({ token, password }) {
 }
 
 async function resolveSession(token) {
-  await withState(async () => undefined);
-  const state = getState();
-  const session = state.sessions.find((candidate) => candidate.token === token);
+  return withState(async (state) => {
+    const session = state.sessions.find((candidate) => candidate.token === token);
 
-  if (!session) {
-    return null;
-  }
+    if (!session) {
+      return null;
+    }
 
-  const user = state.users.find((candidate) => candidate.id === session.userId);
-  if (!user) {
-    return null;
-  }
+    const user = state.users.find((candidate) => candidate.id === session.userId);
+    if (!user) {
+      return null;
+    }
 
-  const profile = state.profiles.find((candidate) => candidate.ownerUserId === user.id) ?? null;
-  touchUserActivity(user.id);
+    const profile = state.profiles.find((candidate) => candidate.ownerUserId === user.id) ?? null;
+    touchUserActivity(user.id);
 
-  return {
-    token,
-    user: createSessionUser(user),
-    profile,
-  };
+    return {
+      token,
+      user: createSessionUser(user),
+      profile,
+    };
+  });
 }
 
 async function updateLanguage(userId, language) {

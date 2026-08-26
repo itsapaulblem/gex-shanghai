@@ -7,13 +7,15 @@
     "build": "vite build",
     "dev": "vite",
     "api": "node server/app.js",
+    "seed:demo": "node server/seed-demo.js",
     "test": "node --test --test-concurrency=1",
     "start": "node server/app.js",
     "start:prod": "node server/app.js"
   },
   "dependencies": {
     "lucide-react": "0.487.0",
-    "nodemailer": "6.10.1",
+    "nodemailer": "^9.0.5",
+    "pg": "^8.23.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "tw-animate-css": "1.3.8"
