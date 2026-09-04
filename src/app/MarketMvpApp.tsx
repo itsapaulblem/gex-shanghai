@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { api, type ConnectionRecord, type Locale, type MessageRecord, type ProfileRecord, type SessionRecord } from './lib/api';
 import { ImageWithFallback } from './components/figma/ImageWithFallback';
+import { buildProfileSearchCorpus } from '../../shared/profile-search.js';
 
 type Screen = 'auth' | 'forgot-password' | 'reset-password' | 'setup' | 'me' | 'browse' | 'detail' | 'connections' | 'chat';
 type AuthMode = 'login' | 'register';
@@ -405,61 +406,6 @@ const EDUCATION_RANK: Record<string, number> = {
   博士: 4,
   博士后: 5,
 };
-
-const SEARCH_ALIASES: Record<string, string[]> = {
-  上海: ['shanghai'],
-  北京: ['beijing'],
-  杭州: ['hangzhou'],
-  深圳: ['shenzhen'],
-  江苏: ['jiangsu'],
-  浙江: ['zhejiang'],
-  互联网: ['internet', 'tech', 'technology'],
-  金融: ['finance', 'financial'],
-  教育: ['education'],
-  建筑: ['construction'],
-  医疗: ['medical', 'healthcare'],
-  硕士: ['master', 'masters', 'graduate'],
-  本科: ['bachelor', 'bachelors', 'undergraduate'],
-  博士: ['phd', 'doctorate'],
-  大专: ['college', 'associate'],
-  有房: ['own house', 'house'],
-  无房: ['no house'],
-  有车: ['own car', 'car'],
-  无车: ['no car'],
-};
-
-function normalizeSearchCorpus(profile: ProfileRecord) {
-  const baseValues = [
-    profile.childAlias,
-    profile.city,
-    profile.hukou,
-    profile.hometown,
-    profile.education,
-    profile.school,
-    profile.major,
-    profile.industry,
-    profile.jobTitle,
-    profile.income,
-    profile.property,
-    profile.car,
-    profile.hobbies,
-    profile.about,
-    profile.preferences,
-    profile.traits.join(' '),
-    String(profile.age),
-    String(profile.height),
-    'city',
-    'hukou',
-    'school',
-    'industry',
-    'education',
-    'income',
-    'height',
-  ].filter(Boolean);
-
-  const aliases = baseValues.flatMap((value) => SEARCH_ALIASES[value] ?? []);
-  return [...baseValues, ...aliases].join(' ').toLowerCase();
-}
 
 function getEducationRank(value?: string | null) {
   if (!value) {
@@ -1620,7 +1566,7 @@ export default function MarketMvpApp() {
 
     const filtered = profiles.filter((profile) => {
       const matchesGender = filters.gender === 'all' || profile.gender === filters.gender;
-      const corpus = normalizeSearchCorpus(profile);
+      const corpus = buildProfileSearchCorpus(profile);
 
       const matchesSearch = searchTokens.length === 0 || searchTokens.every((token) => corpus.includes(token));
 

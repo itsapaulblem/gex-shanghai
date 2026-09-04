@@ -1,4 +1,5 @@
 import { createId, getState, getUserPresence, toPublicProfile, withState } from '../store.js';
+import { matchesProfileSearch } from '../../shared/profile-search.js';
 
 function toProfileResponse(profile, state) {
   if (!profile) {
@@ -129,9 +130,7 @@ function applyFilters(profiles, filters = {}) {
   const education = filters.education ?? 'all';
 
   return profiles.filter((profile) => {
-    const matchesSearch = !search || [profile.childAlias, profile.city, profile.hukou, profile.industry, profile.school, profile.about, profile.preferences, profile.preferredAgeRange, profile.preferredHeightRange, profile.minEducationLevel, profile.hukouPreference, profile.additionalPreferences]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(search));
+    const matchesSearch = matchesProfileSearch(profile, search);
 
     const matchesGender = gender === 'all' || profile.gender === gender;
     const matchesCity = city === 'all' || profile.city === city;

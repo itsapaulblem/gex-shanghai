@@ -10,9 +10,10 @@ process.env.GEX_DATA_DIR = testDataDir;
 const { closeStore, getState, loadState } = await import('../server/store.js');
 const { seedDemoData } = await import('../server/demo-data.js');
 const { register, resolveSession } = await import('../server/services/auth.js');
-const { createProfile } = await import('../server/services/profiles.js');
+const { createProfile, listProfiles } = await import('../server/services/profiles.js');
 const { approveConnection, rejectConnection, requestConnection } = await import('../server/services/connections.js');
 const { deleteMessage, sendMessage } = await import('../server/services/chat.js');
+const { matchesProfileSearch } = await import('../shared/profile-search.js');
 
 function profileInput(alias, gender = '男') {
   return {
@@ -64,7 +65,12 @@ test('security and behavior regressions', async (t) => {
   });
 
   const firstProfile = await createProfile(firstSession.user.id, profileInput('First'));
-  const secondProfile = await createProfile(secondSession.user.id, profileInput('Second', '女'));
+  const secondProfile = await createProfile(secondSession.user.id, {
+    ...profileInput('Second', '女'),
+    city: '成都',
+    hukou: '四川成都',
+    hometown: '江苏苏州',
+  });
 
   await t.test('profile input is validated and age is server-derived', async () => {
     assert.equal(firstProfile.age, new Date().getFullYear() - 1995);
@@ -76,6 +82,17 @@ test('security and behavior regressions', async (t) => {
       createProfile('invalid_user_2', { ...profileInput('Invalid'), height: 'not-a-number' }),
       { message: 'HEIGHT_INVALID' },
     );
+  });
+
+  await t.test('profile search supports Chinese and general pinyin queries', async () => {
+    const chengduResults = await listProfiles(firstSession.user.id, { search: 'chengdu' });
+    const suzhouResults = await listProfiles(firstSession.user.id, { search: 'su zhou' });
+
+    assert.ok(chengduResults.profiles.some((profile) => profile.id === secondProfile.id));
+    assert.ok(suzhouResults.profiles.some((profile) => profile.id === secondProfile.id));
+    assert.equal(matchesProfileSearch({ city: '西安', traits: [] }, 'xian'), true);
+    assert.equal(matchesProfileSearch({ city: '厦门', traits: [] }, 'xia men'), true);
+    assert.equal(matchesProfileSearch({ city: '成都', traits: [] }, '北京'), false);
   });
 
   await t.test('self-connections are rejected', async () => {

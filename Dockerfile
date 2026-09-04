@@ -12,6 +12,7 @@ RUN wget -qO /app/rds-ca-bundle.pem \
 
 COPY dist ./dist
 COPY server ./server
+COPY shared ./shared
 
 EXPOSE 8080
 CMD ["node", "server/app.js"]
