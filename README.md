@@ -6,16 +6,6 @@ This website is an online extension of the Shanghai People's Park marriage marke
 ## Live Website
 
 - Production link: http://gex-shanghai-prod.eba-jd5upeub.us-east-1.elasticbeanstalk.com/
-- Professor-facing user guide: publish the [`docs`](docs/) directory with GitHub Pages.
-
-## Publish The User Guide With GitHub Pages
-
-1. Push this repository to GitHub.
-2. Open the repository's **Settings** page.
-3. Select **Pages** under **Code and automation**.
-4. Under **Build and deployment**, choose **Deploy from a branch**.
-5. Select the main branch and the `/docs` folder, then click **Save**.
-6. GitHub will publish the guide at `https://<username>.github.io/<repository>/`.
 
 ## Who This Is For
 
