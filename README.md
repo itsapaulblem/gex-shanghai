@@ -16,8 +16,6 @@ This website is an online extension of the Shanghai People's Park marriage marke
 ## Main Features
 
 - Account registration and sign in.
-- Email OTP verification during sign-up.
-- Forgot-password and reset-password flow.
 - Child profile creation and editing.
 - Profile browsing with filters and keyword search.
 - Incoming and outgoing connection request management.
@@ -37,9 +35,7 @@ This website is an online extension of the Shanghai People's Park marriage marke
 2. Switch to the registration flow.
 3. Enter your email address.
 4. Enter a password that meets the password rules shown in the app.
-5. Request the email OTP code.
-6. Enter the OTP code to verify the account.
-7. Finish registration and continue into the app.
+5. Create the account and continue into the app.
 
 ## Sign In
 
@@ -48,14 +44,6 @@ This website is an online extension of the Shanghai People's Park marriage marke
 3. Submit the form.
 
 If your account already has a child profile, you will go into the main browsing flow. If not, the app sends you to profile setup first.
-
-## Reset Your Password
-
-1. Click Forgot Password.
-2. Enter the email address used for the account.
-3. Submit the reset request.
-4. Open the reset link sent to your email.
-5. Enter and confirm the new password.
 
 ## Complete The Child Profile First
 
