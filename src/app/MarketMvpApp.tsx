@@ -950,9 +950,11 @@ export default function MarketMvpApp() {
       return;
     }
 
+    // Only sort is sent to the server: search/gender/age/height/education/salary
+    // are all re-applied client-side against the full list (see filteredProfiles
+    // below), so narrowing the fetch by those filters here would permanently
+    // shrink the in-memory profile list on the next sort change or manual refresh.
     const payload = await api.listProfiles(activeToken, {
-      search: currentFilters.search,
-      gender: currentFilters.gender,
       sort: currentFilters.sort,
     });
 

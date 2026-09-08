@@ -59,16 +59,7 @@ function buildProfileSearchCorpus(profile) {
   values.push(...(Array.isArray(profile?.traits) ? profile.traits : []));
   values.push(profile?.age, profile?.height);
 
-  return [
-    ...values.flatMap(searchableVersions),
-    'city',
-    'hukou',
-    'school',
-    'industry',
-    'education',
-    'income',
-    'height',
-  ].join(' ');
+  return values.flatMap(searchableVersions).join(' ');
 }
 
 function matchesProfileSearch(profile, query) {
