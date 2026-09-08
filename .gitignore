@@ -10,6 +10,9 @@ node_modules/
 .npm-cache/
 .norton-aws-ca.pem
 
+# Build output
+dist/
+
 # Local development artifacts
 *.local
 npm-debug.log*

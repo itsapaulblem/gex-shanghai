@@ -126,6 +126,8 @@ Private chat becomes available only after a connection is approved.
 
 This project is deployed as a single Node server that serves both the API and the built frontend bundle. Production requires PostgreSQL so application data survives Elastic Beanstalk instance replacements and deployments. Local development and automated tests continue to use `.data/gex-shanghai.json` unless PostgreSQL is explicitly configured.
 
+`dist/` (the built frontend) is git-ignored and generated on demand by `npm run build` — it is not committed to the repository. Run the build before deploying, as described below.
+
 ### Production database
 
 Create a PostgreSQL database in Amazon RDS, preferably outside the Elastic Beanstalk environment lifecycle. Allow the Elastic Beanstalk instance security group to connect to port 5432, then configure either:
