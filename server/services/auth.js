@@ -2,6 +2,23 @@ import crypto from 'node:crypto';
 import { createId, getState, hashPassword, sanitizeUser, touchUserActivity, withState } from '../store.js';
 import { sendPasswordResetEmail, sendSignupOtpEmail } from './mailer.js';
 
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function createSession(userId) {
+  const createdAt = new Date();
+  return {
+    token: crypto.randomUUID(),
+    userId,
+    createdAt: createdAt.toISOString(),
+    expiresAt: new Date(createdAt.getTime() + SESSION_TTL_MS).toISOString(),
+  };
+}
+
+function isSessionExpired(session) {
+  const expiresMs = new Date(session.expiresAt).getTime();
+  return !Number.isFinite(expiresMs) || expiresMs <= Date.now();
+}
+
 function verifyPassword(password, user) {
   const candidate = user.passwordSalt ? hashPassword(password, user.passwordSalt) : hashPassword(password);
   return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(user.passwordHash));
@@ -165,11 +182,7 @@ async function register({ email, password, language = 'zh' }) {
       language,
     };
 
-    const session = {
-      token: crypto.randomUUID(),
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-    };
+    const session = createSession(user.id);
 
     state.users.push(user);
     state.sessions.push(session);
@@ -194,14 +207,13 @@ async function login({ email, password }) {
       throw error;
     }
 
-    const existingSession = state.sessions.find((session) => session.userId === user.id);
-    const session = existingSession ?? {
-      token: crypto.randomUUID(),
-      userId: user.id,
-      createdAt: new Date().toISOString(),
-    };
+    const existingSession = state.sessions.find((session) => session.userId === user.id && !isSessionExpired(session));
+    const session = existingSession ?? createSession(user.id);
 
-    if (!existingSession) {
+    if (existingSession) {
+      session.expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    } else {
+      state.sessions = state.sessions.filter((candidate) => candidate.userId !== user.id);
       state.sessions.push(session);
     }
 
@@ -319,10 +331,17 @@ async function resolveSession(token) {
       return null;
     }
 
+    if (isSessionExpired(session)) {
+      state.sessions = state.sessions.filter((candidate) => candidate.token !== token);
+      return null;
+    }
+
     const user = state.users.find((candidate) => candidate.id === session.userId);
     if (!user) {
       return null;
     }
+
+    session.expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
 
     const profile = state.profiles.find((candidate) => candidate.ownerUserId === user.id) ?? null;
     touchUserActivity(user.id);
