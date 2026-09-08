@@ -9,8 +9,8 @@ process.env.GEX_DATA_DIR = testDataDir;
 
 const { closeStore, getState, loadState } = await import('../server/store.js');
 const { seedDemoData } = await import('../server/demo-data.js');
-const { register, resolveSession } = await import('../server/services/auth.js');
-const { createProfile, listProfiles } = await import('../server/services/profiles.js');
+const { login, register, resolveSession } = await import('../server/services/auth.js');
+const { createProfile, getProfile, listProfiles } = await import('../server/services/profiles.js');
 const { approveConnection, rejectConnection, requestConnection } = await import('../server/services/connections.js');
 const { deleteMessage, sendMessage } = await import('../server/services/chat.js');
 const { matchesProfileSearch } = await import('../shared/profile-search.js');
@@ -93,6 +93,32 @@ test('security and behavior regressions', async (t) => {
     assert.equal(matchesProfileSearch({ city: '西安', traits: [] }, 'xian'), true);
     assert.equal(matchesProfileSearch({ city: '厦门', traits: [] }, 'xia men'), true);
     assert.equal(matchesProfileSearch({ city: '成都', traits: [] }, '北京'), false);
+  });
+
+  await t.test('sessions expire, evict on use, and refresh a fresh token on re-login', async () => {
+    const thirdSession = await register({ email: 'third@example.com', password: 'Strong!Pass3', language: 'en' });
+    const sessionRecord = state.sessions.find((candidate) => candidate.token === thirdSession.token);
+    assert.ok(sessionRecord.expiresAt);
+
+    sessionRecord.expiresAt = new Date(Date.now() + 1000).toISOString();
+    await resolveSession(thirdSession.token);
+    assert.ok(new Date(sessionRecord.expiresAt).getTime() > Date.now() + 1000);
+
+    sessionRecord.expiresAt = new Date(Date.now() - 1000).toISOString();
+    const resolved = await resolveSession(thirdSession.token);
+    assert.equal(resolved, null);
+    assert.equal(state.sessions.some((candidate) => candidate.token === thirdSession.token), false);
+
+    const relogin = await login({ email: 'third@example.com', password: 'Strong!Pass3' });
+    assert.notEqual(relogin.token, thirdSession.token);
+  });
+
+  await t.test('viewing a profile always returns a sanitized, decorated response, even before completing your own profile', async () => {
+    const noProfileYet = await register({ email: 'noprofile@example.com', password: 'Strong!Pass4', language: 'en' });
+    const viewed = await getProfile(secondProfile.id, noProfileYet.user.id);
+    assert.ok(viewed);
+    assert.ok('presence' in viewed);
+    assert.equal('passwordHash' in viewed, false);
   });
 
   await t.test('self-connections are rejected', async () => {
