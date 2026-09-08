@@ -23,6 +23,12 @@ Write-Host "Checking required CLIs..."
 eb --version | Out-Host
 aws --version | Out-Host
 
+Write-Host "Running test suite..."
+npm test
+if ($LASTEXITCODE -ne 0) {
+  throw "Test suite failed. Deployment stopped."
+}
+
 Write-Host "Building frontend bundle..."
 npm run build
 if ($LASTEXITCODE -ne 0) {
