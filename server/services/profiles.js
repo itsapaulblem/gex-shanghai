@@ -180,11 +180,6 @@ async function getProfile(profileId, userId) {
     return null;
   }
 
-  const ownProfile = state.profiles.find((candidate) => candidate.ownerUserId === userId);
-  if (profile.ownerUserId !== userId && !ownProfile) {
-    return profile;
-  }
-
   return toProfileResponse(profile, state);
 }
 
